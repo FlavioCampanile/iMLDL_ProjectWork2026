@@ -1,4 +1,9 @@
-# iMLDL_ProjectWork2026
-Official GitHub Repository for the semester project within the course "Introduction to Machine Learning and Deep Learning" at University of St. Gallen.
+# INSERT THE NAME OF THE STARTUP
 
-Users: Flavio Massimo Campanile, Filippo Strafile
+**Course:** 7,230 | 8,230 - Introduction to Machine Learning and Deep Learning (Autumn Semester 2026)  
+**Institution:** University of St. Gallen (HSG)  
+**Founders (Team 1):** Flavio Massimo Campanile & Filippo Strafile  
+**Instructor:** Prof. Dr. Bruno Rodrigues  
+
+---
+

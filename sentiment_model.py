@@ -1,4 +1,6 @@
-﻿import pandas as pd
+﻿import os
+import joblib
+import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
@@ -98,3 +100,11 @@ for i in order[:10]:
 print("10 most POSITIVE words:")
 for i in order[::-1][:10]:
     print(f"  {words[i]:<20}{weights[i]:>8.3f}")
+
+# ---------- Save the model ----------
+
+# Save the vectorizer and the model in one file, to use them in apply_topics.py
+os.makedirs("models", exist_ok=True)
+joblib.dump({"vectorizer": vectorizer, "model": model}, "models/sentiment_model.joblib")
+print()
+print("Model saved to models/sentiment_model.joblib")

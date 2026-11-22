@@ -7,11 +7,11 @@ This guide explains the two scripts in this repository so that either of us can 
 | `sentiment_model.py` | Is a hotel-review sentence **positive or negative**? | TF-IDF + logistic regression (classification) |
 | `impact_model.py` | **How many score points** does a review gain or lose when it mentions a topic? | Multiple linear regression + bootstrap (regression) |
 
-How to run (from the repository folder, with the datasets inside `Data/`):
+How to run (from the repository root folder, with the datasets inside `Data/`):
 
 ```
-python sentiment_model.py
-python impact_model.py
+python src/sentiment_model.py
+python experiments/impact_model.py
 ```
 
 The datasets are **not** on GitHub (`Data/` is in `.gitignore`), so they have to be shared outside GitHub.

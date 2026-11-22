@@ -1,2 +1,19 @@
-Data/
-models/
+# Datasets and trained models are not shared on GitHub (licenses and file size).
+# Only the README files that explain how to recreate them are tracked.
+Data/*
+!Data/README.md
+models/*
+!models/README.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/

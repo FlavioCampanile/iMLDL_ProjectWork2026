@@ -1,3 +1,4 @@
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold
@@ -5,8 +6,13 @@ from sklearn.dummy import DummyRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, r2_score
 
+# Main folder of the repository (one level above the folder of this file):
+# the paths work from whatever folder the script is launched
+ROOT = Path(__file__).resolve().parents[1]
+DATA_FOLDER = ROOT / "data"
+
 # Load the sheet "Recensioni" from the Excel file
-df = pd.read_excel("Data/WWRSF_HotelReviewRegression.xlsx", sheet_name="Recensioni")
+df = pd.read_excel(DATA_FOLDER / "WWRSF_HotelReviewRegression.xlsx", sheet_name="Recensioni")
 
 # Number of rows (= reviews)
 print("Number of reviews:", len(df))

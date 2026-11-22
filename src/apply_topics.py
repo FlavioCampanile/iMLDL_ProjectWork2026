@@ -1,17 +1,17 @@
 import time
 import pandas as pd
-from pipeline import (TOPICS, EMPTY_NEGATIVE, EMPTY_POSITIVE, EMPTY_NEGATIVE_EXPRESSIONS,
+from pipeline import (DATA_FOLDER, TOPICS, EMPTY_NEGATIVE, EMPTY_POSITIVE, EMPTY_NEGATIVE_EXPRESSIONS,
                       remove_placeholder, remove_short_expression, remove_nothing_praise,
                       topics_of_text, topics_of_many_texts, clean_negative, clean_positive)
 
-# "Nothing" rule: SWITCHED OFF (table in Data/review_topics.csv).
-# Put True to build the second table (Data/review_topics_nothing.csv), used by impact_nothing.py
+# "Nothing" rule: SWITCHED OFF (table in data/review_topics.csv).
+# Put True to build the second table (data/review_topics_nothing.csv), used by impact_nothing.py
 USE_NOTHING_RULE = False
 
 # ---------- Step 1: load the 515K dataset and look at the most frequent texts ----------
 
 # Load ALL the columns
-df = pd.read_csv("Data/Hotel_Reviews.csv")
+df = pd.read_csv(DATA_FOLDER / "Hotel_Reviews.csv")
 print("Rows in the file:", len(df))
 
 # Remove duplicate rows (identical in ALL the columns), keeping the first
@@ -142,9 +142,9 @@ print(f"Table built for ALL {len(full_table)} reviews in {minutes:.1f} minutes")
 
 # Two different files, so the table WITH the rule never overwrites the original one
 if USE_NOTHING_RULE:
-    output_file = "Data/review_topics_nothing.csv"
+    output_file = DATA_FOLDER / "review_topics_nothing.csv"
 else:
-    output_file = "Data/review_topics.csv"
+    output_file = DATA_FOLDER / "review_topics.csv"
 
 # Save the table (index=False: do not save the row numbers as an extra column)
 full_table.to_csv(output_file, index=False)

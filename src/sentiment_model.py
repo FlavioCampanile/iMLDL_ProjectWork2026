@@ -1,4 +1,4 @@
-﻿import os
+﻿from pathlib import Path
 import joblib
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -7,8 +7,14 @@ from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 
+# Main folder of the repository (one level above the folder of this file):
+# the paths work from whatever folder the script is launched
+ROOT = Path(__file__).resolve().parents[1]
+DATA_FOLDER = ROOT / "data"
+MODELS_FOLDER = ROOT / "models"
+
 # Load the dataset (utf-8-sig removes the BOM at the start of the file)
-df = pd.read_csv("Data/HRAST.csv", encoding="utf-8-sig")
+df = pd.read_csv(DATA_FOLDER / "HRAST.csv", encoding="utf-8-sig")
 
 # Number of rows (= sentences) in the dataset
 print("Number of rows:", len(df))
@@ -104,7 +110,7 @@ for i in order[::-1][:10]:
 # ---------- Save the model ----------
 
 # Save the vectorizer and the model in one file, to use them in apply_topics.py
-os.makedirs("models", exist_ok=True)
-joblib.dump({"vectorizer": vectorizer, "model": model}, "models/sentiment_model.joblib")
+MODELS_FOLDER.mkdir(exist_ok=True)
+joblib.dump({"vectorizer": vectorizer, "model": model}, MODELS_FOLDER / "sentiment_model.joblib")
 print()
 print("Model saved to models/sentiment_model.joblib")

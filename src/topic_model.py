@@ -1,5 +1,5 @@
-import os
 import re
+from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
@@ -7,6 +7,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+
+# Main folder of the repository (one level above the folder of this file):
+# the paths work from whatever folder the script is launched
+ROOT = Path(__file__).resolve().parents[1]
+DATA_FOLDER = ROOT / "data"
+MODELS_FOLDER = ROOT / "models"
 
 # ---------- Keyword lists for the keyword baseline (written by hand) ----------
 # Rules: lowercase only; a keyword must match a WHOLE word in the sentence
@@ -68,7 +74,7 @@ TOPICS = [
 # ---------- Step 1: load and clean the dataset ----------
 
 # Load the dataset (utf-8-sig removes the BOM at the start of the file)
-df = pd.read_csv("Data/HRAST.csv", encoding="utf-8-sig")
+df = pd.read_csv(DATA_FOLDER / "HRAST.csv", encoding="utf-8-sig")
 
 # Remove the empty column without a name
 df = df.drop(columns=["Unnamed: 2"])
@@ -272,10 +278,10 @@ for sentence, topics in zip(examples, predict_topics(examples)):
     print(f"    -> {topics}")
 
 # Save everything needed to use the model later (vectorizer, 21 models, thresholds)
-os.makedirs("models", exist_ok=True)
+MODELS_FOLDER.mkdir(exist_ok=True)
 joblib.dump(
     {"topics": TOPICS, "vectorizer": vectorizer, "models": models, "thresholds": thresholds},
-    "models/topic_model.joblib",
+    MODELS_FOLDER / "topic_model.joblib",
 )
 print()
 print("Model saved to models/topic_model.joblib")

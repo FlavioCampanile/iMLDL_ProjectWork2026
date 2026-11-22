@@ -1,6 +1,6 @@
 # **Roomor · Contesto del progetto** 
 
-Nov 17, 2026 · @Filippo 
+Nov 17, 2026 · @Filippo · aggiornato il 22 nov 2026 (struttura della repo)
 
 Questo documento riassume tutto il progetto Roomor: cosa abbiamo fatto, cosa stiamo facendo e come lavoriamo. Per riprendere il lavoro in una chat nuova, incolla il link a questo documento (oppure esportalo in Markdown e allegalo) e scrivi "leggi questo contesto prima di rispondere". Va aggiornato a ogni passo importante. 
 
@@ -121,6 +121,22 @@ HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disa
 
 - **Decisione:** DistilBERT dopo il report, con un limite di 2 giorni, sul Model 1 (temi) perché è quello che costruisce la tabella del Model 3. Successo = batte micro F1 0.857 / macro 0.852 su HRAST e poi il MAE 0.97 su hotel mai visti. 
 
+### **Aggiornamento 22 novembre, struttura della repo (branch `submission`).** 
+
+- **Nuova branch `submission`**, copia di `topic-model`, organizzata già per la consegna. Da qui in poi si lavora su questa branch. **Il codice non è stato toccato**: i file `.py` sono stati solo spostati (git li vede come rinomine al 100%, nessuna riga cambiata). 
+
+- **Nuova struttura:** 
+  - `src/` · la pipeline finale: `topic_model.py`, `sentiment_model.py`, `apply_topics.py`, `impact_full.py`. Qui vanno anche i prossimi `pipeline.py` e `report.py`. 
+  - `experiments/` · versioni precedenti e analisi di sensibilità, fuori dalla pipeline finale: `impact_model.py` (Model 3 sulle 300 recensioni, mid-term) e `impact_nothing.py` (regola "nothing"). 
+  - `app/` · la demo dal vivo (per ora solo un README). 
+  - `docs/` · `CODE_EXPLANATION.md`, `TRUSTWORTHY_AI.md` (bozza con i titoli: limiti, rischi, usi impropri, bias dei dati) e `docs/internal/` con questo file e `To-Do-List.md`. 
+  - `Data/` e `models/` · restano fuori da GitHub, ma ora ognuna ha un `README.md` tracciato che dice quali file metterci e da quale script nascono. 
+  - Nella radice: `README.md` riscritto in inglese per la consegna (nome Roomor, struttura, pipeline, come riprodurre i risultati, dati e licenze), `requirements.txt` con le versioni usate, `.gitignore` aggiornato. 
+
+- **Come si lanciano ora gli script:** sempre dalla cartella principale della repo, non da dentro `src/`: per esempio `python src/topic_model.py`. Funziona senza cambiare il codice perché gli script cercano `Data/` e `models/` a partire dalla cartella da cui si lancia il comando. 
+
+- **Da completare nella struttura:** i link Kaggle in `Data/README.md`, il testo di `docs/TRUSTWORTHY_AI.md`, la demo in `app/`. Il sito web non ha ancora una cartella: da decidere dove ospitarlo. 
+
 |Quando|Cosa|Risultato|
 |---|---|---|
 |17 nov|Model 1 · temi su HRAST<br>(<br>topic_model.py): 23,105 frasi dopo i<br>duplicati, divise 16,173 / 3,466 / 3,466<br>(train / validation / test, seed 42); 21<br>regressioni logistiche su TF-IDF; soglia per<br>tema scelta sul validation (quasi tutte tra<br>0.05 e 0.30)|Micro F1 0.857 / macro F1 0.852 sul test.<br>Baseline: parole chiave 0.808 / 0.807,<br>"sempre Room" 0.167 / 0.017. Con soglia<br>0.5 il modello era peggio delle parole chiave<br>(0.797 / 0.727). Vince su 15 temi su 21,<br>soprattutto Generic (0.16 → 0.62), Facilities<br>(0.59 → 0.79), Comfort (0.71 → 0.82); le<br>parole chiave vincono su Clean, View,<br>Beach, Bed, Lift, Value for money|
@@ -168,7 +184,7 @@ HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disa
 
 ## **Cosa stiamo facendo ora e cosa resta** 
 
-Il Model 1 (temi) è fatto e salvato in <mark>models/topic_model.joblib</mark> , con la funzione <mark>predict_topics</mark> . Scoperta utile: in HRAST il tema **Generic** riguarda l'edificio e l'hotel nel suo insieme (building, design, decor, entrance, atmosphere), non i giudizi vaghi. Il Model 1 è stato applicato a tutto il 515K <mark>(apply_topics.py</mark> ) e il Model 3 è addestrato su tutte le recensioni ( <mark>impact_full.py</mark> ). Bootstrap, confronto e analisi di sensibilità sono fatti (22 novembre). Ora stiamo costruendo il generatore di report (`pipeline.py` e `report.py`), con la verifica sui 224 hotel di test; dopo viene DistilBERT sul Model 1. Il piano completo, con le caselle da spuntare, è nella roadmap. 
+Il Model 1 (temi) è fatto e salvato in <mark>models/topic_model.joblib</mark> , con la funzione <mark>predict_topics</mark> . Scoperta utile: in HRAST il tema **Generic** riguarda l'edificio e l'hotel nel suo insieme (building, design, decor, entrance, atmosphere), non i giudizi vaghi. Il Model 1 è stato applicato a tutto il 515K <mark>(apply_topics.py</mark> ) e il Model 3 è addestrato su tutte le recensioni ( <mark>impact_full.py</mark> ). Bootstrap, confronto e analisi di sensibilità sono fatti (22 novembre). Ora stiamo costruendo il generatore di report (`src/pipeline.py` e `src/report.py`, nella branch `submission`), con la verifica sui 224 hotel di test; dopo viene DistilBERT sul Model 1. Il piano completo, con le caselle da spuntare, è nella roadmap. 
 
 1. **Cuore ML (16–22 nov):** Model 1 con soglia per tema scelta sul validation; Model 2 rifatto con train / validation / test e F1 anche sulle lamentele; regola di divisione delle frasi, valutata sulle 2,884 frasi miste. 
 
@@ -228,6 +244,8 @@ Se manca tempo si taglia in quest'ordine: video, confronto con l'LLM, DistilBERT
 
 |Cosa|Dove|
 |---|---|
+|Questo file di contesto|`docs/internal/` nella repository (branch `submission`)|
+|Guida al codice riga per riga (inglese)|`docs/CODE_EXPLANATION.md`|
 |Roadmap fino al pitch finale|documento|
 |Guida per le domande tecniche (italiano)|documento|
 |Guida per le domande tecniche (inglese)|Roomor_technical_QA_study_guide.docx|
@@ -237,8 +255,8 @@ Se manca tempo si taglia in quest'ordine: video, confronto con l'LLM, DistilBERT
 |Documento di progetto iniziale (ottobre)|Progetto_recensioni_hotel.docx|
 |Campione da 300 recensioni per il Model 3|WWRSF_HotelReviewRegression.xlsx, foglio<br>"Recensioni"|
 |Script di prova di Claude (solo riferimento)|baseline.py,<br>analisi_frasi_miste.py|
-|Script nostri|sentiment_model.py(Model 2),<br>impact_model.py<br>(Model 3 sulle 300 righe), nella repository GitHub<br>condivisa|
-|Dataset|HRAST e 515K da Kaggle (link nella sezione I dati),<br>nella cartella<br>data/esclusa da GitHub|
+|Script nostri|Repository GitHub condivisa, branch `submission`: pipeline finale in `src/` (topic_model.py, sentiment_model.py, apply_topics.py, impact_full.py); versioni precedenti e analisi di sensibilità in `experiments/` (impact_model.py, impact_nothing.py)|
+|Dataset|HRAST e 515K da Kaggle (link nella sezione I dati),<br>nella cartella<br>Data/ esclusa da GitHub (vedi Data/README.md)|
 |Materiale del corso|iMLDL-SemesterProject.pdf(brief),<br>5-Preparing-<br>Mid-Term-Talk.pdf, slide delle lezioni M01–M05|
 
 

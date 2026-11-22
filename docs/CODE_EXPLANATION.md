@@ -7,14 +7,14 @@ This guide explains the two scripts in this repository so that either of us can 
 | `sentiment_model.py` | Is a hotel-review sentence **positive or negative**? | TF-IDF + logistic regression (classification) |
 | `impact_model.py` | **How many score points** does a review gain or lose when it mentions a topic? | Multiple linear regression + bootstrap (regression) |
 
-How to run (from the repository folder, with the datasets inside `Data/`):
+How to run (from the repository root folder, with the datasets inside `data/`):
 
 ```
-python sentiment_model.py
-python impact_model.py
+python src/sentiment_model.py
+python experiments/impact_model.py
 ```
 
-The datasets are **not** on GitHub (`Data/` is in `.gitignore`), so they have to be shared outside GitHub.
+The datasets are **not** on GitHub (`data/` is in `.gitignore`): the Kaggle links are in the README.
 
 ---
 
@@ -36,7 +36,7 @@ The datasets are **not** on GitHub (`Data/` is in `.gitignore`), so they have to
 
 ### Data
 
-`Data/HRAST.csv` has 23,113 sentences from hotel reviews. Important columns:
+`data/HRAST.csv` has 23,113 sentences from hotel reviews. Important columns:
 
 - `review`: the sentence.
 - `positive`, `negative`, `neutral`: 0/1 flags with the sentiment label.
@@ -47,9 +47,9 @@ The datasets are **not** on GitHub (`Data/` is in `.gitignore`), so they have to
 ### Step 1: load and inspect
 
 ```python
-df = pd.read_csv("Data/HRAST.csv", encoding="utf-8-sig")
+df = pd.read_csv(DATA_FOLDER / "HRAST.csv", encoding="utf-8-sig")
 ```
-Reads the CSV into a table (`DataFrame`). `utf-8-sig` tells Python to discard the BOM, an invisible character at the start of the file; without it the first column would be called `﻿id`.
+Reads the CSV into a table (`DataFrame`). `DATA_FOLDER` is the `data` folder of the repository, found from the position of the script (`Path(__file__)`). `utf-8-sig` tells Python to discard the BOM, an invisible character at the start of the file; without it the first column would be called `﻿id`.
 
 ```python
 print("Number of rows:", len(df))
@@ -187,7 +187,7 @@ These make sense. Note that `wasn` and `didn` come from "wasn't" and "didn't": t
 
 ### Data
 
-`Data/WWRSF_HotelReviewRegression.xlsx`, sheet `Recensioni`: 300 real Booking.com reviews.
+`data/WWRSF_HotelReviewRegression.xlsx`, sheet `Recensioni`: 300 real Booking.com reviews.
 
 - `Reviewer_Score`: the score given, from 2.5 to 10 (mean 8.347). This is `y`.
 - Five topics: Staff, Room, Noise, Location, Restaurant. For each there are two 0/1 columns, `Neg_<Topic>` (the negative text mentions the topic) and `Pos_<Topic>` (the positive text mentions it), found by keyword matching. That gives 10 columns, which together form `X`.
@@ -197,7 +197,7 @@ Reading the `.xlsx` file needs the `openpyxl` library.
 ### Step 1: load and inspect
 
 ```python
-df = pd.read_excel("Data/WWRSF_HotelReviewRegression.xlsx", sheet_name="Recensioni")
+df = pd.read_excel(DATA_FOLDER / "WWRSF_HotelReviewRegression.xlsx", sheet_name="Recensioni")
 topic_cols = [c for c in df.columns if c.startswith(("Neg_", "Pos_"))]
 ```
 `read_excel` reads one sheet. The second line builds a list with the names of the columns that start with `Neg_` or `Pos_`, which are the 10 topic columns. Then a loop prints `df[col].sum()` for each, the number of reviews mentioning that topic.

@@ -53,8 +53,11 @@ EMPTY_POSITIVE = [
 
 # ---------- Load the saved models ----------
 
-# Folder of this file + "models": it works from whatever folder the script is launched
-MODELS_FOLDER = Path(__file__).resolve().parent / "models"
+# Main folder of the repository (one level above the folder of this file):
+# the paths work from whatever folder the script is launched
+ROOT = Path(__file__).resolve().parents[1]
+DATA_FOLDER = ROOT / "data"
+MODELS_FOLDER = ROOT / "models"
 
 # Load Model 1 (vectorizer, 21 models, thresholds) saved by topic_model.py
 saved = joblib.load(MODELS_FOLDER / "topic_model.joblib")

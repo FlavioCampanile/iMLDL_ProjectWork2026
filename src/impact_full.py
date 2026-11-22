@@ -1,15 +1,22 @@
 import json
 import time
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.linear_model import LinearRegression
 
+# Main folder of the repository (one level above the folder of this file):
+# the paths work from whatever folder the script is launched
+ROOT = Path(__file__).resolve().parents[1]
+DATA_FOLDER = ROOT / "data"
+MODELS_FOLDER = ROOT / "models"
+
 # ---------- Step 1: load the Model 3 table and look at it ----------
 
 # Load the table built by apply_topics.py (one row per review)
-df = pd.read_csv("Data/review_topics.csv")
+df = pd.read_csv(DATA_FOLDER / "review_topics.csv")
 
 # The 21 Neg_ columns and the 21 Pos_ columns, found by their name
 neg_cols = [col for col in df.columns if col.startswith("Neg_")]
@@ -178,12 +185,12 @@ weights = pd.DataFrame({
     "upper": upper,            # 97.5th percentile of the bootstrap
     "share_pct": share,        # % of train reviews where the column is 1
 })
-weights.to_csv("models/impact_weights.csv", index_label="topic")
+weights.to_csv(MODELS_FOLDER / "impact_weights.csv", index_label="topic")
 print()
 print("Saved models/impact_weights.csv with", len(weights), "rows")
 
 # Save the intercept in a separate file: predicted score = intercept + sum of the coefficients
 # of the topics in the review (the CSV keeps exactly one row per topic column)
-with open("models/impact_intercept.json", "w") as f:
+with open(MODELS_FOLDER / "impact_intercept.json", "w") as f:
     json.dump({"intercept": float(model.intercept_)}, f)
 print("Saved models/impact_intercept.json:", round(model.intercept_, 3))

@@ -1,9 +1,9 @@
 import pandas as pd
-from pipeline import (MODELS_FOLDER, TOPICS, sentiment_model, sentiment_vectorizer, predict_topics,
+from pipeline import (DATA_FOLDER, MODELS_FOLDER, TOPICS, sentiment_model, sentiment_vectorizer, predict_topics,
                       make_windows, topics_of_many_texts, clean_negative, clean_positive)
 
 # Report "what to fix first" for ONE hotel.
-# Importing this file does not run anything: the test at the end starts only with "python report.py".
+# Importing this file does not run anything: the test at the end starts only with "python src/report.py".
 
 N_TOP = 3          # how many topics get examples in "Fix first", and how many topics are in "Protect"
 N_EXAMPLES = 2     # how many pieces of real text for each of them
@@ -185,13 +185,13 @@ def print_report(report):
         for example in row["examples"]:
             print(f"       \"{example}\"")
 
-# ---------- Test on 3 hotels of the Model 3 test set (only with "python report.py") ----------
+# ---------- Test on 3 hotels of the Model 3 test set (only with "python src/report.py") ----------
 
 if __name__ == "__main__":
     from sklearn.model_selection import GroupShuffleSplit
 
     # Load the reviews as in apply_topics.py: remove the duplicates, then the spaces at the borders
-    df = pd.read_csv("Data/Hotel_Reviews.csv")
+    df = pd.read_csv(DATA_FOLDER / "Hotel_Reviews.csv")
     df = df.drop_duplicates()
     for col in ["Hotel_Address", "Negative_Review", "Positive_Review"]:
         df[col] = df[col].str.strip()

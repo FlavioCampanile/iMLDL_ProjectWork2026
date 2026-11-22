@@ -1,0 +1,7 @@
+# Versions used to obtain the results in this repository (Python 3.12)
+scikit-learn==1.8.0
+pandas==3.0.1
+numpy==2.2.6
+joblib==1.5.3
+# only for experiments/impact_model.py (reads an .xlsx file)
+openpyxl

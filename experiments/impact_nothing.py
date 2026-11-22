@@ -1,3 +1,4 @@
+from pathlib import Path
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.metrics import mean_absolute_error, r2_score
@@ -6,8 +7,13 @@ from sklearn.linear_model import LinearRegression
 # Step 6: how much do the Neg_ coefficients change with the "nothing" rule?
 # Same regression as Step 3 of impact_full.py, on two tables built by apply_topics.py
 
-df_off = pd.read_csv("Data/review_topics.csv")            # rule switched off (original table)
-df_on = pd.read_csv("Data/review_topics_nothing.csv")     # rule switched on
+# Main folder of the repository (one level above the folder of this file):
+# the paths work from whatever folder the script is launched
+ROOT = Path(__file__).resolve().parents[1]
+DATA_FOLDER = ROOT / "data"
+
+df_off = pd.read_csv(DATA_FOLDER / "review_topics.csv")            # rule switched off (original table)
+df_on = pd.read_csv(DATA_FOLDER / "review_topics_nothing.csv")     # rule switched on
 
 neg_cols = [col for col in df_off.columns if col.startswith("Neg_")]
 pos_cols = [col for col in df_off.columns if col.startswith("Pos_")]

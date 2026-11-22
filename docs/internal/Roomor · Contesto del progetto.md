@@ -1,6 +1,6 @@
 # **Roomor · Contesto del progetto** 
 
-Nov 17, 2026 · @Filippo · aggiornato il 22 nov 2026 (struttura della repo, report)
+Nov 17, 2026 · @Filippo · aggiornato il 22 nov 2026 (struttura della repo, report, verifica sui 224 hotel)
 
 Questo documento riassume tutto il progetto Roomor: cosa abbiamo fatto, cosa stiamo facendo e come lavoriamo. Per riprendere il lavoro in una chat nuova, incolla il link a questo documento (oppure esportalo in Markdown e allegalo) e scrivi "leggi questo contesto prima di rispondere". Va aggiornato a ogni passo importante. 
 
@@ -126,7 +126,7 @@ HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disa
 - **Si lavora su `main`.** La riorganizzazione fatta nella branch `submission` (commit `cbebde2`) è stata unita in `main` insieme a `pipeline.py` e `report.py`. I dataset, caricati per errore su `submission` (commit `cb17823`), **non** sono in `main`: non lavorare più su `submission`, da cancellare dopo conferma.
 
 - **Nuova struttura:** 
-  - `src/` · la pipeline finale: `topic_model.py`, `sentiment_model.py`, `apply_topics.py`, `impact_full.py`, `pipeline.py` (funzioni condivise, si importa e non si esegue) e `report.py` (report per un hotel). 
+  - `src/` · la pipeline finale: `topic_model.py`, `sentiment_model.py`, `apply_topics.py`, `impact_full.py`, `pipeline.py` (funzioni condivise, si importa e non si esegue) e `report.py` (report per un hotel), `verify_hotels.py` (verifica sui 224 hotel). 
   - `experiments/` · versioni precedenti e analisi di sensibilità, fuori dalla pipeline finale: `impact_model.py` (Model 3 sulle 300 recensioni, mid-term) e `impact_nothing.py` (regola "nothing"). 
   - `app/` · la demo dal vivo (per ora solo un README). 
   - `docs/` · `CODE_EXPLANATION.md`, `TRUSTWORTHY_AI.md` (bozza con i titoli: limiti, rischi, usi impropri, bias dei dati) e `docs/internal/` con questo file e `To-Do-List.md`. 
@@ -152,6 +152,18 @@ HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disa
 - **Prova su 3 hotel mai visti:** Savoy Amsterdam (voto 6.01): 9 temi in Fix first, primo Room (−0.137). Mövenpick Amsterdam (8.51): Value for money, Location, Check-in. H10 Casa Mimosa (9.66): nessun tema chiaramente peggiore della media.
 
 - **Errore di conteggio:** 25 recensioni a caso per hotel (seed 42) tra quelle con almeno un tema criticato, 114 temi contati: **circa 30% sbagliati** (34 su 114), **12% al Savoy** (7 su 57) e **47% al Casa Mimosa** (27 su 57); altri 15 dubbi. Non è la media di tutti gli hotel: sono i due estremi. **Etichette messe da Claude, da ricontrollare a mano da noi due prima di dichiararle** (file `data/count_check_labels.csv`, fuori da GitHub).
+
+### **Aggiornamento 22 novembre, verifica sui 224 hotel di test (`src/verify_hotels.py`).**
+
+- **Metodo:** voto previsto di un hotel = intercetta + somma sui 42 temi di (quota × peso), confrontato con il voto medio vero. Hotel mai visti dal Model 3 (82,681 recensioni). Grafico in <mark>results/hotel_scores.png</mark> .
+
+- **Risultati:** correlazione 0.907; MAE per hotel 0.310 contro 0.523 della baseline (sempre 8.37), cioè 41% in meno; per singola recensione il miglioramento è 25% (0.968 contro 1.288). Il passaggio da 0.97 a 0.31 è in parte solo l'effetto della media: il confronto giusto è con la baseline.
+
+- **Compressione delle differenze:** terzo di hotel con voto più basso previsto troppo alto (+0.37), terzo con voto più alto previsto troppo basso (−0.41); deviazione standard dei voti previsti 0.299 contro 0.641 dei veri. Caso peggiore Savoy: 7.50 previsto, 6.01 vero. L'ordine tra hotel è affidabile, l'ampiezza no: i "punti persi" del report sono priorità relative, non punti di voto recuperabili.
+
+- **Spiegazione probabile (non verificata):** attenuation bias dovuto agli errori del Model 1: colonne 0/1 con errori spingono i pesi verso zero, quindi le previsioni si stringono verso la media. Possono contribuire anche la gravità delle critiche (il modello sa se un tema è criticato, non quanto) e ciò che non è un tema.
+
+- **Cosa non dimostra:** che i singoli temi siano giusti (gli errori possono compensarsi), che sistemare un problema alzi il voto, che valga per hotel svizzeri o in altre lingue. Temi e voto vengono dalle stesse recensioni: non è una previsione del futuro.
 
 |Quando|Cosa|Risultato|
 |---|---|---|
@@ -200,7 +212,7 @@ HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disa
 
 ## **Cosa stiamo facendo ora e cosa resta** 
 
-Il Model 1 (temi) è fatto e salvato in <mark>models/topic_model.joblib</mark> , con la funzione <mark>predict_topics</mark> . Scoperta utile: in HRAST il tema **Generic** riguarda l'edificio e l'hotel nel suo insieme (building, design, decor, entrance, atmosphere), non i giudizi vaghi. Il Model 1 è stato applicato a tutto il 515K <mark>(src/apply_topics.py</mark> ) e il Model 3 è addestrato su tutte le recensioni ( <mark>src/impact_full.py</mark> ). Bootstrap, confronto e analisi di sensibilità sono fatti (22 novembre). Il generatore di report esiste (`src/pipeline.py` e `src/report.py`, nella branch `main`) ed è provato su 3 hotel; manca la verifica sui 224 hotel di test; dopo viene DistilBERT sul Model 1. Il piano completo, con le caselle da spuntare, è nella roadmap. 
+Il Model 1 (temi) è fatto e salvato in <mark>models/topic_model.joblib</mark> , con la funzione <mark>predict_topics</mark> . Scoperta utile: in HRAST il tema **Generic** riguarda l'edificio e l'hotel nel suo insieme (building, design, decor, entrance, atmosphere), non i giudizi vaghi. Il Model 1 è stato applicato a tutto il 515K <mark>(src/apply_topics.py</mark> ) e il Model 3 è addestrato su tutte le recensioni ( <mark>src/impact_full.py</mark> ). Bootstrap, confronto e analisi di sensibilità sono fatti (22 novembre). Il generatore di report esiste (`src/pipeline.py` e `src/report.py`, nella branch `main`) ed è provato su 3 hotel e verificato sui 224 hotel di test (22 novembre); dopo viene DistilBERT sul Model 1. Il piano completo, con le caselle da spuntare, è nella roadmap. 
 
 1. **Cuore ML (16–22 nov):** Model 1 con soglia per tema scelta sul validation; Model 2 rifatto con train / validation / test e F1 anche sulle lamentele; regola di divisione delle frasi, valutata sulle 2,884 frasi miste. 
 
@@ -275,7 +287,7 @@ Se manca tempo si taglia in quest'ordine: video, confronto con l'LLM, DistilBERT
 |Documento di progetto iniziale (ottobre)|Progetto_recensioni_hotel.docx|
 |Campione da 300 recensioni per il Model 3|WWRSF_HotelReviewRegression.xlsx, foglio<br>"Recensioni"|
 |Script di prova di Claude (solo riferimento)|baseline.py,<br>analisi_frasi_miste.py|
-|Script nostri|Repository GitHub condivisa, branch `main`: pipeline finale in `src/` (topic_model.py, sentiment_model.py, pipeline.py, apply_topics.py, impact_full.py, report.py); versioni precedenti e analisi di sensibilità in `experiments/` (impact_model.py, impact_nothing.py)|
+|Script nostri|Repository GitHub condivisa, branch `main`: pipeline finale in `src/` (topic_model.py, sentiment_model.py, pipeline.py, apply_topics.py, impact_full.py, report.py, verify_hotels.py); versioni precedenti e analisi di sensibilità in `experiments/` (impact_model.py, impact_nothing.py)|
 |Dataset|HRAST e 515K da Kaggle (link nella sezione I dati),<br>nella cartella<br>data/ esclusa da GitHub (vedi data/README.md)|
 |Materiale del corso|iMLDL-SemesterProject.pdf(brief),<br>5-Preparing-<br>Mid-Term-Talk.pdf, slide delle lezioni M01–M05|
 

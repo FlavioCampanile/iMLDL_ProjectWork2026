@@ -1,6 +1,6 @@
 # **Roomor · Contesto del progetto** 
 
-Nov 17, 2026 · @Filippo · aggiornato il 22 nov 2026 (struttura della repo, report, verifica sui 224 hotel)
+Nov 17, 2026 · @Filippo · aggiornato il 22 nov 2026 (struttura della repo, report, verifica sui 224 hotel, DistilBERT)
 
 Questo documento riassume tutto il progetto Roomor: cosa abbiamo fatto, cosa stiamo facendo e come lavoriamo. Per riprendere il lavoro in una chat nuova, incolla il link a questo documento (oppure esportalo in Markdown e allegalo) e scrivi "leggi questo contesto prima di rispondere". Va aggiornato a ogni passo importante. 
 
@@ -165,6 +165,20 @@ HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disa
 
 - **Cosa non dimostra:** che i singoli temi siano giusti (gli errori possono compensarsi), che sistemare un problema alzi il voto, che valga per hotel svizzeri o in altre lingue. Temi e voto vengono dalle stesse recensioni: non è una previsione del futuro.
 
+### **Aggiornamento 22 novembre, DistilBERT sul Model 1 (temi).**
+
+- **Metodo:** `src/export_split.py` salva la stessa divisione del Model 1 (16,173 / 3,466 / 3,466 frasi, seed 42). Fine-tuning di distilbert-base-uncased su Google Colab (Tesla T4, torch 2.14.1+cu130, transformers 5.22.1 nel secondo addestramento): 21 uscite con sigmoide, learning rate iniziale 2e-5 che scende a 0, batch 32, 64 token, seed 42. Quaderni in `notebooks/`. Una soglia per tema scelta sul validation con la stessa regola del Model 1. Confronto in `experiments/compare_distilbert.py`.
+
+- **Il test è stato guardato DUE volte: una dopo l'addestramento a 3 epoche e una dopo quello a 8 epoche.** La decisione di allungare l'addestramento è stata presa dopo aver visto il primo risultato sul test, quindi il secondo può essere un po' ottimista. Lo stesso limite sui temi rari si vedeva anche sul validation. Da dichiarare nel pitch e in Trustworthy AI.
+
+- **Prima volta, 3 epoche:** test micro F1 0.8733 / macro F1 0.8445. Micro meglio del TF-IDF, macro peggio (differenza −0.007, intervallo da −0.019 a +0.004): criterio (batterli entrambi) non raggiunto. Crolli sui temi rari: Restaurant 0.674 → 0.462, Wi-Fi 0.946 → 0.816.
+
+- **Seconda volta, 8 epoche, si tiene l'epoca con il macro F1 più alto sul validation (epoca 7):** validation micro 0.8952 / macro 0.8872 (TF-IDF 0.8615 / 0.8680); test **micro F1 0.8898 / macro F1 0.8774** contro 0.8567 / 0.8517 del TF-IDF. Differenze +0.033 (intervallo 95% da +0.027 a +0.039) e +0.026 (da +0.014 a +0.036), bootstrap di 1,000 ricampionamenti delle frasi di test. Temi aggiunti per errore 879 → 608, temi mancati 741 → 621, frasi tutte giuste 63.8% → 72.9%. Meglio in 20 temi su 21 (Generic 0.625 → 0.736); peggio Restaurant (0.674 → 0.644, solo 53 frasi). Dall'epoca 4 in poi il macro F1 sul validation cambia poco (0.884–0.887).
+
+- **Limiti:** l'intervallo considera solo il caso nelle frasi di test, non un altro seed. HRAST non è il 515K: non sappiamo ancora se il report migliora. Il Model 1 riconosce il tema, non se il commento è negativo, quindi le critiche contate per errore possono restare. Il modello pesa 268 MB ed è lentissimo senza GPU.
+
+- **Regola decisa il 22 novembre, prima di vedere i risultati:** si rifà l'addestramento a 8 epoche con seed 1 e seed 2, senza altre modifiche. DistilBERT si tiene solo se **tutti e tre i seed** (42, 1, 2) battono 0.857 / 0.852 sul test. Con i seed il test verrà calcolato altre due volte: da dichiarare.
+
 |Quando|Cosa|Risultato|
 |---|---|---|
 |17 nov|Model 1 · temi su HRAST<br>(<br>src/topic_model.py): 23,105 frasi dopo i<br>duplicati, divise 16,173 / 3,466 / 3,466<br>(train / validation / test, seed 42); 21<br>regressioni logistiche su TF-IDF; soglia per<br>tema scelta sul validation (quasi tutte tra<br>0.05 e 0.30)|Micro F1 0.857 / macro F1 0.852 sul test.<br>Baseline: parole chiave 0.808 / 0.807,<br>"sempre Room" 0.167 / 0.017. Con soglia<br>0.5 il modello era peggio delle parole chiave<br>(0.797 / 0.727). Vince su 15 temi su 21,<br>soprattutto Generic (0.16 → 0.62), Facilities<br>(0.59 → 0.79), Comfort (0.71 → 0.82); le<br>parole chiave vincono su Clean, View,<br>Beach, Bed, Lift, Value for money|
@@ -212,7 +226,7 @@ HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disa
 
 ## **Cosa stiamo facendo ora e cosa resta** 
 
-Il Model 1 (temi) è fatto e salvato in <mark>models/topic_model.joblib</mark> , con la funzione <mark>predict_topics</mark> . Scoperta utile: in HRAST il tema **Generic** riguarda l'edificio e l'hotel nel suo insieme (building, design, decor, entrance, atmosphere), non i giudizi vaghi. Il Model 1 è stato applicato a tutto il 515K <mark>(src/apply_topics.py</mark> ) e il Model 3 è addestrato su tutte le recensioni ( <mark>src/impact_full.py</mark> ). Bootstrap, confronto e analisi di sensibilità sono fatti (22 novembre). Il generatore di report esiste (`src/pipeline.py` e `src/report.py`, nella branch `main`) ed è provato su 3 hotel e verificato sui 224 hotel di test (22 novembre); dopo viene DistilBERT sul Model 1. Il piano completo, con le caselle da spuntare, è nella roadmap. 
+Il Model 1 (temi) è fatto e salvato in <mark>models/topic_model.joblib</mark> , con la funzione <mark>predict_topics</mark> . Scoperta utile: in HRAST il tema **Generic** riguarda l'edificio e l'hotel nel suo insieme (building, design, decor, entrance, atmosphere), non i giudizi vaghi. Il Model 1 è stato applicato a tutto il 515K <mark>(src/apply_topics.py</mark> ) e il Model 3 è addestrato su tutte le recensioni ( <mark>src/impact_full.py</mark> ). Bootstrap, confronto e analisi di sensibilità sono fatti (22 novembre). Il generatore di report esiste (`src/pipeline.py` e `src/report.py`, nella branch `main`) ed è provato su 3 hotel e verificato sui 224 hotel di test (22 novembre); DistilBERT sul Model 1 batte il TF-IDF su HRAST (22 novembre); ora si controlla la stabilità con altri due seed, poi si decide se applicarlo al 515K. Il piano completo, con le caselle da spuntare, è nella roadmap. 
 
 1. **Cuore ML (16–22 nov):** Model 1 con soglia per tema scelta sul validation; Model 2 rifatto con train / validation / test e F1 anche sulle lamentele; regola di divisione delle frasi, valutata sulle 2,884 frasi miste. 
 

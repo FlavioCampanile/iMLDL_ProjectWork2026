@@ -1,6 +1,6 @@
 # **Roomor · Contesto del progetto** 
 
-Nov 17, 2026 · @Filippo · aggiornato il 22 nov 2026 (struttura della repo)
+Nov 17, 2026 · @Filippo · aggiornato il 22 nov 2026 (struttura della repo, report)
 
 Questo documento riassume tutto il progetto Roomor: cosa abbiamo fatto, cosa stiamo facendo e come lavoriamo. Per riprendere il lavoro in una chat nuova, incolla il link a questo documento (oppure esportalo in Markdown e allegalo) e scrivi "leggi questo contesto prima di rispondere". Va aggiornato a ogni passo importante. 
 
@@ -32,7 +32,7 @@ Roomor legge le recensioni di un hotel e dice al direttore cosa sistemare per pr
 
 - **Cosa esce:** un report con i temi ordinati per impatto. Per ogni tema: quanto spesso gli ospiti se ne lamentano, quanti punti di voto costa in media una critica (e quanti ne aggiunge un 
 
-complimento), e 2–3 frasi vere come esempio. Priorità di un tema = quota di recensioni che lo criticano × peso del tema. 
+complimento), e 2–3 frasi vere come esempio. Priorità di un tema = (quota di recensioni che lo criticano − quota nell'hotel medio) × peso del tema; si mostrano anche i punti persi in assoluto (quota × peso). 
 
 - **Concorrenti:** TrustYou, Customer Alliance, MARA. Differenza ipotizzata, da verificare con gli albergatori: priorità per impatto sul voto e non per frequenza, e trasparenza (ogni tema rimanda alle frasi da cui viene). 
 
@@ -101,45 +101,61 @@ Al mid-term del 20 ottobre avevamo il sentiment (Model 2) e una prima versione d
 
 ### **Aggiornamento 17 novembre, pomeriggio.** 
 
-- **Model 1 applicato al 515K** <mark>(apply_topics.py</mark> → <mark>data/review_topics.csv</mark> , 515,212 recensioni dopo i duplicati su tutte le colonne). Testi divisi in finestre di 12 parole con passo 6. Segnaposti di "nessuna critica" svuotati con due regole: testi identici a una lista ("No Negative", "nothing", "n a", "leaving"…) ed espressioni brevi ("can t fault", "no complaints"…) solo in testi di al massimo 8 parole senza but / except / apart / only / however / although / besides. 
+- **Model 1 applicato al 515K** <mark>(src/apply_topics.py</mark> → <mark>data/review_topics.csv</mark> , 515,212 recensioni dopo i duplicati su tutte le colonne). Testi divisi in finestre di 12 parole con passo 6. Segnaposti di "nessuna critica" svuotati con due regole: testi identici a una lista ("No Negative", "nothing", "n a", "leaving"…) ed espressioni brevi ("can t fault", "no complaints"…) solo in testi di al massimo 8 parole senza but / except / apart / only / however / although / besides. 
 
 - **Filtro con il sentiment provato e scartato.** L'idea era scartare le finestre del campo negativo che il Model 2 giudica lodi. Su un controllo a mano scartava più critiche vere che lodi (Location: 13 sbagliate su 20), perché il Model 2 ha imparato parole di tema come "location" e "clean" come positive, le finestre tagliano le negazioni e il modello non conosce il neutro. Lezione: il 94.6% di 
 
 HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disattivata, per un'analisi di sensibilità. 
 
-• **Model 3 su tutto il 515K** <mark>(impact_full.py</mark> ): divisione per hotel (1,269 hotel / 432,531 recensioni in train, 224 hotel / 82,681 recensioni in test, nessun hotel in comune). Su hotel mai visti: MAE 0.97 contro 1.29 della baseline (voto medio del train, 8.37), R² 0.36 contro −0.009. Intercetta 8.34. Pesi principali: critiche a Staff −0.80, Clean −0.70, Room −0.61, Bed −0.50, Bathroom −0.46, Noise −0.42; lodi a Staff +0.68, Generic +0.47, View +0.28. Asimmetria tipo Kano: Clean −0.70 / +0.08, Bathroom −0.46 / +0.10, Value for money −0.39 / +0.06; View −0.01 / +0.28. Location lodata nel 48.5% delle recensioni ma vale solo +0.17. Lodi a Lift, Reception e Wi-Fi con segno negativo: temi rari, da verificare con il bootstrap. 
+• **Model 3 su tutto il 515K** <mark>(src/impact_full.py</mark> ): divisione per hotel (1,269 hotel / 432,531 recensioni in train, 224 hotel / 82,681 recensioni in test, nessun hotel in comune). Su hotel mai visti: MAE 0.97 contro 1.29 della baseline (voto medio del train, 8.37), R² 0.36 contro −0.009. Intercetta 8.34. Pesi principali: critiche a Staff −0.80, Clean −0.70, Room −0.61, Bed −0.50, Bathroom −0.46, Noise −0.42; lodi a Staff +0.68, Generic +0.47, View +0.28. Asimmetria tipo Kano: Clean −0.70 / +0.08, Bathroom −0.46 / +0.10, Value for money −0.39 / +0.06; View −0.01 / +0.28. Location lodata nel 48.5% delle recensioni ma vale solo +0.17. Lodi a Lift, Reception e Wi-Fi con segno negativo: temi rari, da verificare con il bootstrap. 
 
 ### **Aggiornamento 22 novembre.** 
 
 - **Bootstrap per hotel** (200 ricampionamenti dei 1,269 hotel di train, circa 8 minuti): 37 pesi su 42 affidabili. Non affidabili: Neg_Beach, Neg_View, Pos_Parking, Pos_Beach, e Neg_Bar al limite (con 1,000 ripetizioni l'intervallo tocca lo zero). Pesi principali molto precisi: Neg_Staff da −0.83 a −0.77, Pos_Staff da +0.66 a +0.70. Ricampionare per hotel invece che per recensione rende gli intervalli in media 1.66 volte più larghi (3.4 volte per Pos_Staff): le recensioni dello stesso hotel non sono indipendenti. Pos_Lift (−0.21), Pos_Reception (−0.07) e Pos_Wi-Fi (−0.03) sono affidabili ma con segno controintuitivo: nel report non vanno mostrati tra le cose da proteggere. 
 
-- **Pesi salvati** in <mark>models/impact_weights.csv</mark> (colonne topic, coef, lower, upper, share_pct; share_pct calcolata sul train). 
+- **Pesi salvati** in <mark>models/impact_weights.csv</mark> (colonne topic, coef, lower, upper, share_pct; share_pct calcolata sul train); intercetta (8.338) in <mark>models/impact_intercept.json</mark> . 
 
 - **Confronto con le 300 recensioni:** segno uguale in 10 pesi su 10, 9 su 10 dentro l'intervallo della prova; nel modello completo i pesi sono quasi tutti più vicini a zero (Neg_Room da −1.10 a −0.61), perché con 42 colonne l'effetto della camera si divide tra Room, Bed, Bathroom, Clean e Comfort, e perché gli errori del Model 1 attenuano i pesi. 
 
-- **Analisi di sensibilità sulla regola "nothing"** <mark>(impact_nothing.py</mark> ): la regola cambia 582 recensioni su 515,212 (0.11%, voto medio 9.63); differenza massima tra i pesi 0.006 (Neg_Generic, da −0.453 a −0.460); MAE 0.9685 contro 0.9681. Decisione: si tiene la tabella senza regola. 
+- **Analisi di sensibilità sulla regola "nothing"** <mark>(experiments/impact_nothing.py</mark> ): la regola cambia 582 recensioni su 515,212 (0.11%, voto medio 9.63); differenza massima tra i pesi 0.006 (Neg_Generic, da −0.453 a −0.460); MAE 0.9685 contro 0.9681. Decisione: si tiene la tabella senza regola. 
 
 - **Decisione:** DistilBERT dopo il report, con un limite di 2 giorni, sul Model 1 (temi) perché è quello che costruisce la tabella del Model 3. Successo = batte micro F1 0.857 / macro 0.852 su HRAST e poi il MAE 0.97 su hotel mai visti. 
 
-### **Aggiornamento 22 novembre, struttura della repo (branch `submission`).** 
+### **Aggiornamento 22 novembre, struttura della repo (branch `main`).**
 
-- **Nuova branch `submission`**, copia di `topic-model`, organizzata già per la consegna. Da qui in poi si lavora su questa branch. **Il codice non è stato toccato**: i file `.py` sono stati solo spostati (git li vede come rinomine al 100%, nessuna riga cambiata). 
+- **Si lavora su `main`.** La riorganizzazione fatta nella branch `submission` (commit `cbebde2`) è stata unita in `main` insieme a `pipeline.py` e `report.py`. I dataset, caricati per errore su `submission` (commit `cb17823`), **non** sono in `main`: non lavorare più su `submission`, da cancellare dopo conferma.
 
 - **Nuova struttura:** 
-  - `src/` · la pipeline finale: `topic_model.py`, `sentiment_model.py`, `apply_topics.py`, `impact_full.py`. Qui vanno anche i prossimi `pipeline.py` e `report.py`. 
+  - `src/` · la pipeline finale: `topic_model.py`, `sentiment_model.py`, `apply_topics.py`, `impact_full.py`, `pipeline.py` (funzioni condivise, si importa e non si esegue) e `report.py` (report per un hotel). 
   - `experiments/` · versioni precedenti e analisi di sensibilità, fuori dalla pipeline finale: `impact_model.py` (Model 3 sulle 300 recensioni, mid-term) e `impact_nothing.py` (regola "nothing"). 
   - `app/` · la demo dal vivo (per ora solo un README). 
   - `docs/` · `CODE_EXPLANATION.md`, `TRUSTWORTHY_AI.md` (bozza con i titoli: limiti, rischi, usi impropri, bias dei dati) e `docs/internal/` con questo file e `To-Do-List.md`. 
-  - `Data/` e `models/` · restano fuori da GitHub, ma ora ognuna ha un `README.md` tracciato che dice quali file metterci e da quale script nascono. 
+  - `data/` (sempre minuscolo: su Mac e Linux `Data` è un'altra cartella) e `models/` · restano fuori da GitHub, ma ora ognuna ha un `README.md` tracciato che dice quali file metterci e da quale script nascono. 
   - Nella radice: `README.md` riscritto in inglese per la consegna (nome Roomor, struttura, pipeline, come riprodurre i risultati, dati e licenze), `requirements.txt` con le versioni usate, `.gitignore` aggiornato. 
 
-- **Come si lanciano ora gli script:** sempre dalla cartella principale della repo, non da dentro `src/`: per esempio `python src/topic_model.py`. Funziona senza cambiare il codice perché gli script cercano `Data/` e `models/` a partire dalla cartella da cui si lancia il comando. 
+- **Come si lanciano ora gli script:** per esempio `python src/topic_model.py` dalla cartella principale. Ogni script trova `data/` e `models/` partendo dalla propria posizione, quindi funziona da qualunque cartella. Controllato: tabella su 1,000 recensioni identica, report identico, Model 1 e 2 riaddestrati identici.
 
-- **Da completare nella struttura:** i link Kaggle in `Data/README.md`, il testo di `docs/TRUSTWORTHY_AI.md`, la demo in `app/`. Il sito web non ha ancora una cartella: da decidere dove ospitarlo. 
+- **Da completare nella struttura:** il testo di `docs/TRUSTWORTHY_AI.md`, la demo in `app/`. I link Kaggle e la citazione di HRAST sono nel README. Il sito web non ha ancora una cartella: da decidere dove ospitarlo.
+
+### **Aggiornamento 22 novembre, generatore di report (`src/report.py`).**
+
+- **Cosa fa:** `make_report(negative_texts, positive_texts)` riceve le recensioni di un hotel e restituisce "Fix first" e "Protect". Usa solo i 37 pesi affidabili (Neg_Bar escluso a mano). Prima di cercare i temi, `normalize_text` porta i testi nel formato del 515K (senza punteggiatura).
+
+- **Ordinamento rispetto all'hotel medio:** Fix first è ordinato per (quota dell'hotel − quota media) × peso. La quota media è share_pct (train). Un tema entra solo se supera la media di almeno 5 punti percentuali e lo criticano almeno 5 recensioni; altrimenti "No topic is clearly worse than the average hotel". Motivo: con i punti assoluti Staff e Room salivano ai primi posti in tutti e 3 gli hotel provati, anche in quello con il voto più alto.
+
+- **Generic escluso da Fix first** (resta nella regressione e può comparire in Protect): nel controllo a mano (etichette di Claude, vedi sotto) 13 critiche su 19 contate come Generic erano sbagliate.
+
+- **Protect:** i 3 temi lodati che fanno guadagnare più punti, solo con peso positivo e affidabile.
+
+- **Esempi:** 2 finestre di almeno 4 parole per tema, scelte con il Model 2 (più negative per Fix first, più positive per Protect), mai la stessa finestra in due temi. Il sentiment sceglie solo gli esempi, non cambia i conteggi: gli esempi possono quindi sembrare più precisi dei numeri. Avviso sotto le 30 recensioni.
+
+- **Prova su 3 hotel mai visti:** Savoy Amsterdam (voto 6.01): 9 temi in Fix first, primo Room (−0.137). Mövenpick Amsterdam (8.51): Value for money, Location, Check-in. H10 Casa Mimosa (9.66): nessun tema chiaramente peggiore della media.
+
+- **Errore di conteggio:** 25 recensioni a caso per hotel (seed 42) tra quelle con almeno un tema criticato, 114 temi contati: **circa 30% sbagliati** (34 su 114), **12% al Savoy** (7 su 57) e **47% al Casa Mimosa** (27 su 57); altri 15 dubbi. Non è la media di tutti gli hotel: sono i due estremi. **Etichette messe da Claude, da ricontrollare a mano da noi due prima di dichiararle** (file `data/count_check_labels.csv`, fuori da GitHub).
 
 |Quando|Cosa|Risultato|
 |---|---|---|
-|17 nov|Model 1 · temi su HRAST<br>(<br>topic_model.py): 23,105 frasi dopo i<br>duplicati, divise 16,173 / 3,466 / 3,466<br>(train / validation / test, seed 42); 21<br>regressioni logistiche su TF-IDF; soglia per<br>tema scelta sul validation (quasi tutte tra<br>0.05 e 0.30)|Micro F1 0.857 / macro F1 0.852 sul test.<br>Baseline: parole chiave 0.808 / 0.807,<br>"sempre Room" 0.167 / 0.017. Con soglia<br>0.5 il modello era peggio delle parole chiave<br>(0.797 / 0.727). Vince su 15 temi su 21,<br>soprattutto Generic (0.16 → 0.62), Facilities<br>(0.59 → 0.79), Comfort (0.71 → 0.82); le<br>parole chiave vincono su Clean, View,<br>Beach, Bed, Lift, Value for money|
+|17 nov|Model 1 · temi su HRAST<br>(<br>src/topic_model.py): 23,105 frasi dopo i<br>duplicati, divise 16,173 / 3,466 / 3,466<br>(train / validation / test, seed 42); 21<br>regressioni logistiche su TF-IDF; soglia per<br>tema scelta sul validation (quasi tutte tra<br>0.05 e 0.30)|Micro F1 0.857 / macro F1 0.852 sul test.<br>Baseline: parole chiave 0.808 / 0.807,<br>"sempre Room" 0.167 / 0.017. Con soglia<br>0.5 il modello era peggio delle parole chiave<br>(0.797 / 0.727). Vince su 15 temi su 21,<br>soprattutto Generic (0.16 → 0.62), Facilities<br>(0.59 → 0.79), Comfort (0.71 → 0.82); le<br>parole chiave vincono su Clean, View,<br>Beach, Bed, Lift, Value for money|
 
 
 
@@ -184,7 +200,7 @@ HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disa
 
 ## **Cosa stiamo facendo ora e cosa resta** 
 
-Il Model 1 (temi) è fatto e salvato in <mark>models/topic_model.joblib</mark> , con la funzione <mark>predict_topics</mark> . Scoperta utile: in HRAST il tema **Generic** riguarda l'edificio e l'hotel nel suo insieme (building, design, decor, entrance, atmosphere), non i giudizi vaghi. Il Model 1 è stato applicato a tutto il 515K <mark>(apply_topics.py</mark> ) e il Model 3 è addestrato su tutte le recensioni ( <mark>impact_full.py</mark> ). Bootstrap, confronto e analisi di sensibilità sono fatti (22 novembre). Ora stiamo costruendo il generatore di report (`src/pipeline.py` e `src/report.py`, nella branch `submission`), con la verifica sui 224 hotel di test; dopo viene DistilBERT sul Model 1. Il piano completo, con le caselle da spuntare, è nella roadmap. 
+Il Model 1 (temi) è fatto e salvato in <mark>models/topic_model.joblib</mark> , con la funzione <mark>predict_topics</mark> . Scoperta utile: in HRAST il tema **Generic** riguarda l'edificio e l'hotel nel suo insieme (building, design, decor, entrance, atmosphere), non i giudizi vaghi. Il Model 1 è stato applicato a tutto il 515K <mark>(src/apply_topics.py</mark> ) e il Model 3 è addestrato su tutte le recensioni ( <mark>src/impact_full.py</mark> ). Bootstrap, confronto e analisi di sensibilità sono fatti (22 novembre). Il generatore di report esiste (`src/pipeline.py` e `src/report.py`, nella branch `main`) ed è provato su 3 hotel; manca la verifica sui 224 hotel di test; dopo viene DistilBERT sul Model 1. Il piano completo, con le caselle da spuntare, è nella roadmap. 
 
 1. **Cuore ML (16–22 nov):** Model 1 con soglia per tema scelta sul validation; Model 2 rifatto con train / validation / test e F1 anche sulle lamentele; regola di divisione delle frasi, valutata sulle 2,884 frasi miste. 
 
@@ -214,7 +230,11 @@ Se manca tempo si taglia in quest'ordine: video, confronto con l'LLM, DistilBERT
 
 - HRAST ha licenza non commerciale: un prodotto vero avrebbe bisogno di etichette proprie. 
 
+- **Critiche contate per errore:** nel campo negativo si conta il tema, non il giudizio; circa 30% dei conteggi sbagliati su 50 recensioni di due hotel estremi (12% Savoy, 47% Casa Mimosa), da ricontrollare a mano. Da dichiarare in Trustworthy AI. 
+
 ### **Domande aperte** 
+
+- ☐ Ricontrollare a mano, noi due, le etichette di `data/count_check_labels.csv` (errore di conteggio). 
 
 - ☐ Data esatta del pitch finale e del feature freeze. 
 
@@ -244,7 +264,7 @@ Se manca tempo si taglia in quest'ordine: video, confronto con l'LLM, DistilBERT
 
 |Cosa|Dove|
 |---|---|
-|Questo file di contesto|`docs/internal/` nella repository (branch `submission`)|
+|Questo file di contesto|`docs/internal/` nella repository (branch `main`)|
 |Guida al codice riga per riga (inglese)|`docs/CODE_EXPLANATION.md`|
 |Roadmap fino al pitch finale|documento|
 |Guida per le domande tecniche (italiano)|documento|
@@ -255,8 +275,8 @@ Se manca tempo si taglia in quest'ordine: video, confronto con l'LLM, DistilBERT
 |Documento di progetto iniziale (ottobre)|Progetto_recensioni_hotel.docx|
 |Campione da 300 recensioni per il Model 3|WWRSF_HotelReviewRegression.xlsx, foglio<br>"Recensioni"|
 |Script di prova di Claude (solo riferimento)|baseline.py,<br>analisi_frasi_miste.py|
-|Script nostri|Repository GitHub condivisa, branch `submission`: pipeline finale in `src/` (topic_model.py, sentiment_model.py, apply_topics.py, impact_full.py); versioni precedenti e analisi di sensibilità in `experiments/` (impact_model.py, impact_nothing.py)|
-|Dataset|HRAST e 515K da Kaggle (link nella sezione I dati),<br>nella cartella<br>Data/ esclusa da GitHub (vedi Data/README.md)|
+|Script nostri|Repository GitHub condivisa, branch `main`: pipeline finale in `src/` (topic_model.py, sentiment_model.py, pipeline.py, apply_topics.py, impact_full.py, report.py); versioni precedenti e analisi di sensibilità in `experiments/` (impact_model.py, impact_nothing.py)|
+|Dataset|HRAST e 515K da Kaggle (link nella sezione I dati),<br>nella cartella<br>data/ esclusa da GitHub (vedi data/README.md)|
 |Materiale del corso|iMLDL-SemesterProject.pdf(brief),<br>5-Preparing-<br>Mid-Term-Talk.pdf, slide delle lezioni M01–M05|
 
 

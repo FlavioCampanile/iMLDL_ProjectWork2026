@@ -23,10 +23,12 @@ iMLDL_ProjectWork2026/
 │   ├── pipeline.py          shared functions to read a review (imported, not run)
 │   ├── apply_topics.py      applies Model 1 to the 515K Booking.com reviews
 │   ├── impact_full.py       Model 3 · impact on the rating (linear regression + bootstrap by hotel)
-│   └── report.py            report "what to fix first" for one hotel
+│   ├── report.py            report "what to fix first" for one hotel
+│   └── verify_hotels.py     predicted vs true score of the 224 test hotels
 ├── experiments/           earlier versions and sensitivity analyses (not part of the final pipeline)
 │   ├── impact_model.py      first Model 3 on the 300-review sample (mid-term)
 │   └── impact_nothing.py    sensitivity analysis of the "nothing" rule
+├── results/               charts produced by the scripts
 ├── app/                   live demo (to be built)
 ├── docs/
 │   ├── CODE_EXPLANATION.md  line-by-line guide to the code
@@ -70,10 +72,11 @@ pip install -r requirements.txt
 | 3 | `python src/apply_topics.py` | `data/Hotel_Reviews.csv` and the two `.joblib` files | `data/review_topics.csv` |
 | 4 | `python src/impact_full.py` | `data/review_topics.csv` | `models/impact_weights.csv`, `models/impact_intercept.json` |
 | 5 | `python src/report.py` | `data/Hotel_Reviews.csv`, `models/` | prints the report of 3 hotels never seen by Model 3 |
+| 6 | `python src/verify_hotels.py` | `data/review_topics.csv`, `models/impact_weights.csv`, `models/impact_intercept.json` | `results/hotel_scores.png` (predicted vs true score of the 224 test hotels) |
 
 `src/pipeline.py` contains the functions shared by the scripts (cleaning, windows, topics): it is imported and must not be run.
 
-Scripts 1 and 2 can be swapped; 3 needs both of them, 4 needs the output of 3, and 5 needs 1, 2 and 4. On our computer script 3 took about 4 minutes and script 4 about 8-9 minutes (the bootstrap).
+Scripts 1 and 2 can be swapped; 3 needs both of them, 4 needs the output of 3, 5 needs 1, 2 and 4, and 6 needs 3 and 4. On our computer script 3 took about 4 minutes and script 4 about 8-9 minutes (the bootstrap).
 
 **Optional (sensitivity analysis):** set `USE_NOTHING_RULE = True` in `src/apply_topics.py`, run it again (it creates `data/review_topics_nothing.csv` and does not touch the original table), run `python experiments/impact_nothing.py`, then put the rule back to `False`.
 

@@ -28,6 +28,8 @@ pip install scikit-learn pandas numpy joblib
 | 3 | `python apply_topics.py` | `Data/Hotel_Reviews.csv` and the two `.joblib` files | `Data/review_topics.csv` |
 | 4 | `python impact_full.py` | `Data/review_topics.csv` | `models/impact_weights.csv`, `models/impact_intercept.json` |
 
+`pipeline.py` contains the functions shared by the scripts (cleaning, windows, topics): it is imported and must not be run.
+
 Scripts 1 and 2 can be swapped; 3 needs both of them, and 4 needs the output of 3. On our computer script 3 took about 4 minutes and script 4 about 8-9 minutes (the bootstrap).
 
 **Optional:** to compare the results with the "nothing" rule, set `USE_NOTHING_RULE = True` in `apply_topics.py`, run it again (it creates `Data/review_topics_nothing.csv` and does not touch the original table), run `python impact_nothing.py`, then put the rule back to `False`.

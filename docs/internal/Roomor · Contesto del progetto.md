@@ -123,7 +123,7 @@ HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disa
 
 ### **Aggiornamento 22 novembre, struttura della repo (branch `main`).**
 
-- **Si lavora su `main`.** La riorganizzazione fatta nella branch `submission` (commit `cbebde2`) è stata unita in `main` insieme a `pipeline.py` e `report.py`. I dataset, caricati per errore su `submission` (commit `cb17823`), **non** sono in `main`: non lavorare più su `submission`, da cancellare dopo conferma.
+- **Si lavora su `main`.** La riorganizzazione fatta nella branch `submission` (commit `cbebde2`) è stata unita in `main` insieme a `pipeline.py` e `report.py`. I dataset, caricati per errore su `submission` (commit `cb17823`), **non** sono in `main`. La branch `submission` è stata cancellata da GitHub il 22 novembre: non farne più il push, rimetterebbe i dataset online. Il commit `cb17823` può restare raggiungibile con il link diretto per un po' e `Hotel_Reviews.csv` resta in Git LFS: per toglierli del tutto serve il supporto GitHub (proprietario della repo).
 
 - **Nuova struttura:** 
   - `src/` · la pipeline finale: `topic_model.py`, `sentiment_model.py`, `apply_topics.py`, `impact_full.py`, `pipeline.py` (funzioni condivise, si importa e non si esegue) e `report.py` (report per un hotel), `verify_hotels.py` (verifica sui 224 hotel). 

@@ -10,4 +10,4 @@ This folder is **not** on GitHub (licenses and file size). Put these files here 
 
 The folder name is lowercase (`data`): on Mac and Linux `Data` would be a different folder. Citation required for HRAST: see the main README.
 
-Files created by the scripts: `review_topics.csv` (by `src/apply_topics.py`) and, optionally, `review_topics_nothing.csv`.
+Files created by the scripts: `review_topics.csv` (by `src/apply_topics.py`) and, optionally, `review_topics_nothing.csv`; `hrast_train.csv`, `hrast_val.csv` and `hrast_test.csv` (by `src/export_split.py`: the split of Model 1).

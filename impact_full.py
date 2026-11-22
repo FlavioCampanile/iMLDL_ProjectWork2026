@@ -1,3 +1,5 @@
+import json
+import time
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
@@ -93,3 +95,95 @@ print()
 print("Pos_ coefficients (from the most positive):")
 for col in coefs[pos_cols].sort_values(ascending=False).index:
     print(f"  {col:<32}{coefs[col]:>7.2f}   ({share[col]:.1f}% of reviews)")
+
+# ---------- Step 4: bootstrap BY HOTEL on the train set ----------
+
+start = time.time()
+
+# Random number generator with a fixed seed, so the results are reproducible
+rng = np.random.RandomState(42)
+
+# For each train hotel, the row positions (inside X_train) of all its reviews
+groups_train = groups.iloc[train_idx].to_numpy()
+rows_by_hotel = list(pd.Series(range(len(groups_train))).groupby(groups_train).indices.values())
+n_hotels = len(rows_by_hotel)
+
+# Plain arrays: taking rows from them is faster than from a DataFrame
+X_train_arr = X_train.to_numpy(dtype=float)
+y_train_arr = y_train.to_numpy()
+
+n_boot = 200
+boot_coefs = []
+for _ in range(n_boot):
+    # Draw as many hotels as in the train set, WITH replacement:
+    # some hotels appear several times, others never
+    drawn = rng.randint(0, n_hotels, size=n_hotels)
+    # Take ALL the reviews of the drawn hotels (twice if the hotel was drawn twice)
+    idx = np.concatenate([rows_by_hotel[h] for h in drawn])
+    boot_model = LinearRegression()
+    boot_model.fit(X_train_arr[idx], y_train_arr[idx])
+    boot_coefs.append(boot_model.coef_)
+
+# Table with 200 rows (one per resample) and 42 columns (one per coefficient)
+boot_coefs = pd.DataFrame(boot_coefs, columns=X_train.columns)
+
+# 95% interval: from the 2.5th to the 97.5th percentile of each coefficient
+lower = boot_coefs.quantile(0.025)
+upper = boot_coefs.quantile(0.975)
+unreliable = (lower <= 0) & (upper >= 0)      # does the interval contain zero?
+
+elapsed = time.time() - start
+
+print()
+print(f"Bootstrap by hotel: {n_boot} resamples of {n_hotels} hotels")
+print(f"{'Topic':<32}{'Coef':>7}{'Lower':>9}{'Upper':>9}  Reliability")
+neg_order = list(coefs[neg_cols].sort_values().index)
+pos_order = list(coefs[pos_cols].sort_values(ascending=False).index)
+for col in neg_order + pos_order:             # same order as in Step 3
+    flag = "NOT RELIABLE" if unreliable[col] else "reliable"
+    print(f"{col:<32}{coefs[col]:>7.2f}{lower[col]:>9.3f}{upper[col]:>9.3f}  {flag}")
+
+print()
+print("Not reliable coefficients:", unreliable.sum(), "out of", len(unreliable))
+print(f"Bootstrap time: {elapsed:.1f} seconds")
+
+# ---------- Step 5: comparison with the trial Model 3 and saving the weights ----------
+
+# Coefficients of the trial model (impact_model.py, 300 reviews).
+# There the topics were found with keywords, and Restaurant also included breakfast.
+trial_coefs = {
+    "Neg_Room": -1.10,
+    "Neg_Staff": -1.01,
+    "Neg_Location": -0.88,
+    "Neg_Restaurant (dinner)": -0.34,
+    "Neg_Noise": -0.22,
+    "Pos_Location": 0.08,
+    "Pos_Room": 0.31,
+    "Pos_Noise": 0.36,
+    "Pos_Restaurant (dinner)": 0.41,
+    "Pos_Staff": 0.89,
+}
+
+print()
+print("Comparison with the trial model (300 reviews, keyword topics):")
+print(f"{'Topic':<26}{'Trial':>8}{'Full':>8}{'Full - Trial':>14}")
+for col, trial in trial_coefs.items():
+    print(f"{col:<26}{trial:>8.2f}{coefs[col]:>8.2f}{coefs[col] - trial:>14.2f}")
+print("Note: in the trial model Restaurant also included breakfast, here it is only dinner.")
+
+# Save one row per coefficient, for the report generator
+weights = pd.DataFrame({
+    "coef": coefs,
+    "lower": lower,            # 2.5th percentile of the bootstrap
+    "upper": upper,            # 97.5th percentile of the bootstrap
+    "share_pct": share,        # % of train reviews where the column is 1
+})
+weights.to_csv("models/impact_weights.csv", index_label="topic")
+print()
+print("Saved models/impact_weights.csv with", len(weights), "rows")
+
+# Save the intercept in a separate file: predicted score = intercept + sum of the coefficients
+# of the topics in the review (the CSV keeps exactly one row per topic column)
+with open("models/impact_intercept.json", "w") as f:
+    json.dump({"intercept": float(model.intercept_)}, f)
+print("Saved models/impact_intercept.json:", round(model.intercept_, 3))

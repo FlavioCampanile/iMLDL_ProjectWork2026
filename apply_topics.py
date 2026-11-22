@@ -87,12 +87,13 @@ models = saved["models"]
 thresholds = saved["thresholds"]
 
 # Load the sentiment model (vectorizer + logistic regression) saved by sentiment_model.py
-# (used only by the "nothing" rule, which is switched OFF for now)
+# (used only by the "nothing" rule)
 saved_sentiment = joblib.load("models/sentiment_model.joblib")
 sentiment_vectorizer = saved_sentiment["vectorizer"]
 sentiment_model = saved_sentiment["model"]
 
-# "Nothing" rule: SWITCHED OFF. Put True to use it (we will use it later for a comparison)
+# "Nothing" rule: SWITCHED OFF (table in Data/review_topics.csv).
+# Put True to build the second table (Data/review_topics_nothing.csv), used by impact_nothing.py
 USE_NOTHING_RULE = False
 NOTHING_RULE_THRESHOLD = 0.90   # P(positive) of the WHOLE text needed to make it empty
 
@@ -244,7 +245,7 @@ for text, count in pd.Series(only_generic_rule).value_counts().head(40).items():
 
 def clean_negative(text):
     """Rule 1 (exact placeholders) + rule 2 (short expressions) for a negative text.
-    If USE_NOTHING_RULE is True, also the "nothing" rule (switched off for now)."""
+    If USE_NOTHING_RULE is True, also the "nothing" rule."""
     text = remove_placeholder(text, EMPTY_NEGATIVE)
     text = remove_short_expression(text, EMPTY_NEGATIVE_EXPRESSIONS)
     if USE_NOTHING_RULE:
@@ -283,7 +284,7 @@ print()
 print(f"Table built for {len(table)} reviews in {seconds:.1f} seconds")
 print(f"Estimated time for all {len(df)} reviews: {seconds * len(df) / len(table) / 60:.1f} minutes")
 
-# Quick check of the "nothing" rule (switched off in the table, but we can call the function)
+# Quick check of the "nothing" rule on two sentences
 example = "Nothing everything was perfect breakfast staff were so polite and the food was lovely"
 print()
 print(f"'nothing' rule test: {example!r} -> {remove_nothing_praise(example)!r}")
@@ -298,9 +299,15 @@ minutes = (time.perf_counter() - start_time) / 60
 print()
 print(f"Table built for ALL {len(full_table)} reviews in {minutes:.1f} minutes")
 
+# Two different files, so the table WITH the rule never overwrites the original one
+if USE_NOTHING_RULE:
+    output_file = "Data/review_topics_nothing.csv"
+else:
+    output_file = "Data/review_topics.csv"
+
 # Save the table (index=False: do not save the row numbers as an extra column)
-full_table.to_csv("Data/review_topics.csv", index=False)
-print("Saved to Data/review_topics.csv -", full_table.shape[0], "rows,", full_table.shape[1], "columns")
+full_table.to_csv(output_file, index=False)
+print("Saved to", output_file, "-", full_table.shape[0], "rows,", full_table.shape[1], "columns")
 
 # Percentage of reviews that criticize / praise each topic, on the whole dataset
 print()

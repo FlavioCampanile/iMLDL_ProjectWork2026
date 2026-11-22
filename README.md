@@ -28,7 +28,9 @@ iMLDL_ProjectWork2026/
 │   └── export_split.py      saves the train / validation / test sentences of Model 1 (for DistilBERT)
 ├── experiments/           earlier versions and sensitivity analyses (not part of the final pipeline)
 │   ├── impact_model.py      first Model 3 on the 300-review sample (mid-term)
-│   └── impact_nothing.py    sensitivity analysis of the "nothing" rule
+│   ├── impact_nothing.py    sensitivity analysis of the "nothing" rule
+│   └── compare_distilbert.py  Model 1 (TF-IDF) vs DistilBERT on the same test sentences
+├── notebooks/             Google Colab notebooks that train DistilBERT on the 21 topics (GPU needed)
 ├── results/               charts produced by the scripts
 ├── app/                   live demo (to be built)
 ├── docs/

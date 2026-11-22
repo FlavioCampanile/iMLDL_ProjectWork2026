@@ -14,7 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_FOLDER = ROOT / "data"
 MODELS_FOLDER = ROOT / "models"
 
-# Which training of DistilBERT: "distilbert" = 3 epochs, "distilbert8" = best of 8 epochs
+# Which training of DistilBERT is shown in detail (Steps 1-5):
+# "distilbert" = 3 epochs, "distilbert8" = best of 8 epochs (seed 42)
 RUN = "distilbert8"
 print("DistilBERT run:", RUN)
 print()
@@ -47,15 +48,20 @@ for j, topic in enumerate(TOPICS):
 # ---------- Step 3: DistilBERT thresholds, chosen on VALIDATION (same rule as topic_model.py) ----------
 
 candidates = np.round(np.arange(1, 19) * 0.05, 2)       # 0.05, 0.10, ..., 0.90
-thresholds = np.zeros(len(TOPICS))
-for j in range(len(TOPICS)):
-    best_f1 = -1
-    for t in candidates:
-        f1 = f1_score(Y_val[:, j], (P_val[:, j] >= t).astype(int), zero_division=0)
-        if f1 > best_f1:
-            best_f1 = f1
-            thresholds[j] = t
 
+def choose_thresholds(probs):
+    """For each topic, the threshold with the highest F1 on the validation set."""
+    best = np.zeros(len(TOPICS))
+    for j in range(len(TOPICS)):
+        best_f1 = -1
+        for t in candidates:
+            f1 = f1_score(Y_val[:, j], (probs[:, j] >= t).astype(int), zero_division=0)
+            if f1 > best_f1:
+                best_f1 = f1
+                best[j] = t
+    return best
+
+thresholds = choose_thresholds(P_val)
 pred_bert = (P_test >= thresholds).astype(int)
 
 # ---------- Step 4: results on the TEST set ----------
@@ -106,3 +112,51 @@ print()
 for k, name in enumerate(["Micro", "Macro"]):
     print(f"{name} F1, DistilBERT - TF-IDF: {bert_scores[k] - tfidf_scores[k]:+.4f} "
           f"(95% interval from {low[k]:+.4f} to {high[k]:+.4f})")
+
+# ---------- Step 6: is the result stable? (8 epochs with three different seeds) ----------
+
+# Rule decided BEFORE the trainings with seed 1 and 2: we keep DistilBERT only if ALL the three
+# seeds beat these two numbers on the test set (the F1 of TF-IDF, rounded to 3 decimals)
+RULE_MICRO, RULE_MACRO = 0.857, 0.852
+
+SEED_RUNS = {42: "distilbert8", 1: "distilbert8_seed1", 2: "distilbert8_seed2"}
+
+def scores_of_run(run):
+    """Thresholds chosen on validation, then micro and macro F1 on validation and on test."""
+    run_val = pd.read_csv(DATA_FOLDER / f"{run}_val_probs.csv", keep_default_na=False)
+    run_test = pd.read_csv(DATA_FOLDER / f"{run}_test_probs.csv", keep_default_na=False)
+    assert list(run_val["review"]) == list(val["review"]), "Validation sentences are different!"
+    assert list(run_test["review"]) == list(test["review"]), "Test sentences are different!"
+    run_thresholds = choose_thresholds(run_val[TOPICS].values)
+    val_scores = micro_macro(Y_val, (run_val[TOPICS].values >= run_thresholds).astype(int))
+    test_scores = micro_macro(Y_test, (run_test[TOPICS].values >= run_thresholds).astype(int))
+    return val_scores, test_scores
+
+print()
+print("=== Stability: 8 epochs, three seeds ===")
+print(f"{'Seed':<10}{'Val micro':>11}{'Val macro':>11}{'Test micro':>12}{'Test macro':>12}  Beats both?")
+test_table = []
+for seed, run in SEED_RUNS.items():
+    if not ((DATA_FOLDER / f"{run}_val_probs.csv").exists() and (DATA_FOLDER / f"{run}_test_probs.csv").exists()):
+        print(f"{seed:<10}files {run}_... not found in data/")
+        continue
+    val_scores, test_scores = scores_of_run(run)
+    beats = test_scores[0] > RULE_MICRO and test_scores[1] > RULE_MACRO
+    test_table.append([test_scores[0], test_scores[1], beats])
+    print(f"{seed:<10}{val_scores[0]:>11.4f}{val_scores[1]:>11.4f}"
+          f"{test_scores[0]:>12.4f}{test_scores[1]:>12.4f}  {'yes' if beats else 'NO'}")
+
+# Mean and minimum of the test columns
+micros, macros = [row[0] for row in test_table], [row[1] for row in test_table]
+print(f"{'Mean':<32}{np.mean(micros):>12.4f}{np.mean(macros):>12.4f}")
+print(f"{'Minimum':<32}{np.min(micros):>12.4f}{np.min(macros):>12.4f}")
+print(f"{'To beat':<32}{RULE_MICRO:>12.4f}{RULE_MACRO:>12.4f}")
+
+# The decision needs ALL the three seeds
+print()
+if len(test_table) < len(SEED_RUNS):
+    print(f"Decision: not possible yet, {len(test_table)} seeds of {len(SEED_RUNS)}")
+elif all(row[2] for row in test_table):
+    print("Decision: KEEP DistilBERT, all the three seeds beat TF-IDF")
+else:
+    print("Decision: KEEP TF-IDF, at least one seed does not beat it")

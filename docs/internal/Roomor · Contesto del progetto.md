@@ -1,6 +1,6 @@
 # **Roomor · Contesto del progetto** 
 
-Nov 17, 2026 · @Filippo · aggiornato il 22 nov 2026 (struttura della repo, report, verifica sui 224 hotel, DistilBERT)
+Nov 17, 2026 · @Filippo · aggiornato il 23 nov 2026 (regola fissa per recensioni scritte come testo unico, test su un hotel svizzero mai visto, controllo a mano, branch `flavio-pre-web-development`)
 
 Questo documento riassume tutto il progetto Roomor: cosa abbiamo fatto, cosa stiamo facendo e come lavoriamo. Per riprendere il lavoro in una chat nuova, incolla il link a questo documento (oppure esportalo in Markdown e allegalo) e scrivi "leggi questo contesto prima di rispondere". Va aggiornato a ogni passo importante. 
 
@@ -53,7 +53,7 @@ pipeline · 1 rule, 3 models, 2 datasets
 
 |Pezzo|Cosa fa|Algoritmo|Baseline da<br>battere|Metrica|Stato|
 |---|---|---|---|---|---|
-|Regola fissa|Spezza le recensioni<br>su but, however,<br>although… e sulle<br>virgole se un pezzo<br>ha due temi; mette<br>da parte i pezzi con<br>sentiment incerto<br>(probabilità 0.35–<br>0.65); nel 515K<br>finestre di circa 12|Regola scritta a<br>mano, non ML|—|Accuratezza<br>sulle frasi<br>miste|Da costruire|
+|Regola fissa|Spezza una recensione scritta come testo unico su . ! ? ; e a capo, prima di but, however, although, though, except, whereas, unfortunately, e sulle virgole se un pezzo ha due temi; il Model 2 manda ogni pezzo al lato negativo o positivo (soglia 0.50, parola di contrasto tolta prima del Model 2). Nel 515K (campi Booking già separati) non serve: lì restano le finestre di 12 parole|Regola scritta a<br>mano + Model 2|Tutto nel lato negativo; Model 2 senza tagli|Accordo con i campi Booking (F1 temi, stesso n. 1 in Fix first); pezzi dalla parte giusta|**Fatto (23 nov)**: 515K stesso n. 1 nell'82% degli hotel (baseline 41% e 5%); citizenM Zürich Fix first identico ai campi Booking|
 
 
 
@@ -83,7 +83,7 @@ Usiamo due dataset pubblici di Kaggle: HRAST insegna ai Model 1 e 2 a leggere le
 ||HRAST|515K Booking.com reviews|
 |---|---|---|
 ||Copenaghen), solo inglese|agosto 2015 – agosto 2017|
-|Etichette|21 temi 0/1; sentiment positive 11,819<br>(51%) / negative 10,504 (45%) /<br>neutral 794 (3%); Aspect = 1 in 2,884<br>frasi miste|Voto 2.5–10 (media 8.4, mediana 8.8, 48% ≥<br>9); testo diviso in Negative_Review e<br>Positive_Review; nessuna etichetta di tema|
+|Etichette|21 temi 0/1; sentiment positive 11,819<br>(51%) / negative 10,504 (45%) /<br>neutral 794 (3%); Aspect = 1 in 2,884<br>frasi con più temi (non "miste": vedi 23 nov)|Voto 2.5–10 (media 8.4, mediana 8.8, 48% ≥<br>9); testo diviso in Negative_Review e<br>Positive_Review; nessuna etichetta di tema|
 |Serve a|Model 1 (temi) e Model 2 (sentiment)|Model 3 (impatto sul voto)|
 |Problemi|BOM nel file (<br>encoding="utf-8-sig"); a<br>capo dentro le virgolette (Excel spezza<br>le righe); 8 duplicati; 4 righe con due<br>sentiment; "σ" nella colonna Location<br>(id 4634); nessuna colonna hotel o<br>città|526 duplicati; testo senza punteggiatura;<br>"nessuna critica" scritto in molti modi ("No<br>Negative" 127,890 volte, "Nothing", "N A"…,<br>circa 30%); lat/lng "NA" in 3,268 righe; date<br>mese/giorno/anno; 48% dei recensori dal<br>Regno Unito|
 
@@ -185,6 +185,22 @@ HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disa
 
 - **Prossimi passi:** noi due ricontrolliamo le 114 etichette; DistilBERT sulle 50 recensioni per vedere se conta meno critiche sbagliate; tempo su un campione del 515K, poi si decide se applicarlo a tutto. Secondo criterio: battere il MAE 0.97 su hotel mai visti (non ancora provato). 
 
+### **Aggiornamento 23 novembre (Flavio, branch `flavio-pre-web-development`).**
+
+Domanda di partenza: il prodotto funziona con recensioni nuove di un hotel mai visto, anche se non sono divise in "liked" / "disliked" come su Booking (Google, TripAdvisor)? Risposta: sì, a certe condizioni. Tutti i numeri sotto sono stati rigenerati sul PC di Flavio con risultati identici a quelli di Claude.
+
+- **Modelli rigenerati** sul PC di Flavio (`models/` era vuota): Model 1 0.8567 / 0.8517, Model 2 accuracy 0.9458, Model 3 MAE 0.9685, 4 pesi non affidabili su 42. Identici al 22 novembre (scikit-learn 1.8.0, Python 3.12 di VS Code: serve `python -m pip install -r requirements.txt`).
+- **Regola fissa costruita** (`src/pipeline.py`: `split_review`, `route_pieces`, `split_full_text`; `src/report.py`: `make_report_from_full_texts`). Le funzioni esistenti non sono cambiate: report dei 3 hotel di prova identico riga per riga.
+- **Soglie scelte su 150 hotel di train** (`experiments/choose_thresholds.py`), con una regola decisa prima: si cambia solo se la sovrapposizione dei temi di Fix first con i campi Booking migliora di più di 0.01. Risultato: **0.50 / 0.50** (nessun pezzo messo da parte: con 0.35 / 0.65 si perdevano più critiche di quante se ne salvassero; 0.817 → 0.850) e parola di contrasto tolta prima del Model 2 (effetto minimo: 0.850 contro 0.847). L'idea di ottobre di "mettere da parte i pezzi incerti" è abbandonata.
+- **Test sui 224 hotel, guardato una volta dopo la scelta** (`src/verify_full_texts.py`): "liked" e "disliked" del 515K incollati in un testo unico. Con un punto tra le due parti: F1 temi criticati 0.921, lodati 0.951; stesso n. 1 in Fix first nell'**81.7%** degli hotel (Model 2 senza tagli 40.6%, tutto nel lato negativo 5.4%); correlazione voto previsto / vero 0.896 (campi Booking 0.907). Senza punteggiatura la regola aiuta poco (stesso n. 1 nel 50%). HRAST con punteggiatura: 92.6% delle frasi dalla parte giusta (senza tagli 67.9%). Unico numero che non migliora: MAE per hotel 0.314 contro 0.301 del Model 2 senza tagli, che però sbaglia il n. 1 nel 59% degli hotel.
+- **Correzione:** in HRAST **Aspect = 1 vuol dire "più temi nella frase", non "lode e critica insieme"** ("Great location and clean rooms"). Sulle 864 frasi con Aspect = 1 e una parola di contrasto la regola taglia il 97.5% e separa lode e critica nel 59.8%.
+- **Hotel svizzero mai visto: citizenM Zürich**, 30 recensioni Booking (lug–nov 2026) copiate a mano da Flavio, in `data/citizenm_zurich_booking.csv` (senza nomi degli ospiti, fuori da GitHub; 21 con i due blocchi distinguibili). Script `src/check_booking_hotel.py`: 91.7% dei pezzi dalla parte giusta; F1 temi 0.925 / 0.930; **Fix first (Room, Noise, Facilities, Comfort) e Protect (Staff, Hotel overall, Location) identici** a quelli costruiti dai blocchi Booking.
+- **Model 3 su citizenM** (`src/explain_hotel.py`, grafico `results/citizenm_zurich_points.png`): voto medio previsto **8.17 contro 8.33 vero** (errore 0.16; sui 224 hotel l'errore medio era 0.31). Per singola recensione invece MAE 0.64 contro 0.58 della baseline "sempre 8.37", correlazione 0.48: va usato solo il dato aggregato. Punti persi −0.85 (Room −0.22, Cleanliness −0.09, Bed −0.08, Noise −0.08), guadagnati +0.69 (Staff +0.25).
+- **Controllo a mano** (`src/check_pieces.py` → `data/manual_check.xlsx`; **etichette messe da Claude**, in `data/manual_check_CLAUDE_labels.xlsx`, riassunto in `results/manual_check_summary.md`, **da rivedere da noi** e da dichiarare come "pre-etichettate con un modello AI e riviste da noi"): citizenM 118 pezzi, tagli giusti 93.2%, lato giusto 92.8%, **critiche nel lato negativo 46 / 46**; tutti gli errori sono lodi o fatti neutri letti come critiche (circa 21% dei pezzi negativi; esempio "didn't hear a thing from inside our room" contato sotto Noise). Dei 30 pezzi "sbagliati" del 515K solo il 47% sono errori veri (37% errori dell'ospite nel campo Booking). Frasi HRAST con "but": 23 / 30 giuste.
+- **Quante recensioni servono** (prova veloce di Claude con uno script temporaneo, non nella repo): 16 hotel di test con almeno 800 recensioni, 60 campioni per dimensione. Stesso n. 1 del report completo: 30 recensioni 53%, 100 69%, 200 80%, 300 85%, 500 91%. Il voto medio si stabilizza già a 100 (errore 0.08). Proposta: ultimi 12–18 mesi, almeno 100 recensioni.
+- **Report di punti di forza e debolezza**, con le informazioni da aggiungere: documento "Roomor · Punti di forza e debolezza" (link nella sezione File e link).
+- **Prossimi passi:** Filippo rivede codice e numeri, poi fa il merge in `main`; rivedere le etichette di Claude; chiedere al prof l'OK per la copia manuale delle recensioni di citizenM; poi demo (Streamlit) e sito.
+
 |Quando|Cosa|Risultato|
 |---|---|---|
 |17 nov|Model 1 · temi su HRAST<br>(<br>src/topic_model.py): 23,105 frasi dopo i<br>duplicati, divise 16,173 / 3,466 / 3,466<br>(train / validation / test, seed 42); 21<br>regressioni logistiche su TF-IDF; soglia per<br>tema scelta sul validation (quasi tutte tra<br>0.05 e 0.30)|Micro F1 0.857 / macro F1 0.852 sul test.<br>Baseline: parole chiave 0.808 / 0.807,<br>"sempre Room" 0.167 / 0.017. Con soglia<br>0.5 il modello era peggio delle parole chiave<br>(0.797 / 0.727). Vince su 15 temi su 21,<br>soprattutto Generic (0.16 → 0.62), Facilities<br>(0.59 → 0.79), Comfort (0.71 → 0.82); le<br>parole chiave vincono su Clean, View,<br>Beach, Bed, Lift, Value for money|
@@ -194,7 +210,7 @@ HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disa
 |Quando|Cosa|Risultato|
 |---|---|---|
 |16 nov|Messaggio a un contatto nel mondo hotel<br>management per un feedback (utilità da<br>1 a 10, come decidono oggi)|In attesa di risposta|
-|10 nov|Feedback scritto del prof sul mid-term|Non ancora letto con Claude|
+|10 nov|Feedback scritto del prof sul mid-term|Ricevuto per mail il 16 nov e letto il 23 nov (vedi Domande aperte)|
 |20 ott|Mid-term talk, 10 slide in PDF, 8 minuti +<br>2 di domande|Fatto; voto non ancora noto|
 |19 ott|Model 3 di prova: regressione lineare<br>sulle 300 recensioni, 10 colonne (5 temi<br>criticati / lodati)|MAE 1.01 contro 1.28 della baseline (voto<br>medio), R² 0.33, cross-validation a 5 fold|
 |19 ott|Bootstrap del Model 3 (1,000<br>ricampionamenti delle 300 righe)|Affidabili: critiche a Room −1.10, Staff −1.01,<br>Location −0.88; lodi a Staff +0.89,<br>Restaurant +0.41. Non affidabili: Noise e le<br>altre lodi|
@@ -227,14 +243,16 @@ HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disa
 |DistilBERT solo se batte la regressione logistica<br>sul test|È meno spiegabile e più costoso: deve guadagnarsi il<br>posto|
 |Niente scraping|Termini di Booking.com, sezione A15.2|
 |Dataset mai su GitHub|Licenze e dimensione dei file; si scaricano da Kaggle<br>seguendo il README|
+|Soglie della regola fissa 0.50 / 0.50, nessun pezzo messo da parte (23 nov)|Scelte su 150 hotel di train con una regola decisa prima: mettere da parte i pezzi incerti perdeva più critiche di quante ne salvasse (sovrapposizione Fix first 0.817 → 0.850)|
+|Il voto della singola recensione non si mostra al direttore (23 nov)|Su citizenM il Model 3 per recensione fa peggio della baseline (MAE 0.64 contro 0.58); il voto aggregato dell'hotel invece è accurato (8.17 contro 8.33)|
 
 
 
 ## **Cosa stiamo facendo ora e cosa resta** 
 
-Il Model 1 (temi) è fatto e salvato in <mark>models/topic_model.joblib</mark> , con la funzione <mark>predict_topics</mark> . Scoperta utile: in HRAST il tema **Generic** riguarda l'edificio e l'hotel nel suo insieme (building, design, decor, entrance, atmosphere), non i giudizi vaghi. Il Model 1 è stato applicato a tutto il 515K <mark>(src/apply_topics.py</mark> ) e il Model 3 è addestrato su tutte le recensioni ( <mark>src/impact_full.py</mark> ). Bootstrap, confronto e analisi di sensibilità sono fatti (22 novembre). Il generatore di report esiste (`src/pipeline.py` e `src/report.py`, nella branch `main`) ed è provato su 3 hotel e verificato sui 224 hotel di test (22 novembre); DistilBERT sul Model 1 batte il TF-IDF su HRAST (22 novembre); la stabilità è confermata con tre seed e si tiene il seed 42; ora si controlla l'errore di conteggio, poi si decide se applicarlo al 515K. Il piano completo, con le caselle da spuntare, è nella roadmap. 
+Il Model 1 (temi) è fatto e salvato in <mark>models/topic_model.joblib</mark> , con la funzione <mark>predict_topics</mark> . Scoperta utile: in HRAST il tema **Generic** riguarda l'edificio e l'hotel nel suo insieme (building, design, decor, entrance, atmosphere), non i giudizi vaghi. Il Model 1 è stato applicato a tutto il 515K <mark>(src/apply_topics.py</mark> ) e il Model 3 è addestrato su tutte le recensioni ( <mark>src/impact_full.py</mark> ). Bootstrap, confronto e analisi di sensibilità sono fatti (22 novembre). Il generatore di report esiste (`src/pipeline.py` e `src/report.py`, nella branch `main`) ed è provato su 3 hotel e verificato sui 224 hotel di test (22 novembre); DistilBERT sul Model 1 batte il TF-IDF su HRAST (22 novembre); la stabilità è confermata con tre seed e si tiene il seed 42; ora si controlla l'errore di conteggio, poi si decide se applicarlo al 515K. Il 23 novembre (branch `flavio-pre-web-development`) è stata costruita la regola fissa: il report funziona anche con recensioni scritte come testo unico ed è stato provato su un hotel svizzero mai visto (citizenM Zürich). Il piano completo, con le caselle da spuntare, è nella roadmap. 
 
-1. **Cuore ML (16–22 nov):** Model 1 con soglia per tema scelta sul validation; Model 2 rifatto con train / validation / test e F1 anche sulle lamentele; regola di divisione delle frasi, valutata sulle 2,884 frasi miste. 
+1. **Cuore ML (16–22 nov):** Model 1 con soglia per tema scelta sul validation; Model 2 rifatto con train / validation / test e F1 anche sulle lamentele; regola di divisione delle frasi (**fatta il 23 nov**, valutata contro i campi Booking del 515K e su citizenM Zürich). 
 
 2. **Model 3 e report (23–29 nov):** Model 1 applicato a tutto il 515K; Model 3 su tutte le recensioni con temi criticati e lodati; test su hotel mai visti (divisione per hotel); generatore del report "cosa sistemare per primo". 
 
@@ -262,15 +280,25 @@ Se manca tempo si taglia in quest'ordine: video, confronto con l'LLM, DistilBERT
 
 - HRAST ha licenza non commerciale: un prodotto vero avrebbe bisogno di etichette proprie. 
 
+- **Lodi lette come critiche (regola fissa, 23 nov):** su citizenM circa 21% dei pezzi mandati al lato negativo erano lodi o fatti neutri; nessuna critica persa. Un tema può essere gonfiato (Noise con "didn't hear a thing"): gli esempi del report vanno riletti. Da dichiarare in Trustworthy AI.
+
+- **Servono punteggiatura, inglese e abbastanza recensioni (23 nov):** senza punteggiatura la regola aiuta poco; le recensioni non in inglese sono ignorate senza avviso; con 30 recensioni il problema n. 1 coincide con quello del report completo solo nel 53% dei casi (80% con 200).
+
+- **Problemi senza un tema:** caldo e aria condizionata (4 recensioni di citizenM) non hanno un tema tra i 21 e finiscono sparsi in Facilities e Comfort.
+
 - **Critiche contate per errore:** nel campo negativo si conta il tema, non il giudizio; circa 30% dei conteggi sbagliati su 50 recensioni di due hotel estremi (12% Savoy, 47% Casa Mimosa), da ricontrollare a mano. Da dichiarare in Trustworthy AI. 
 
 ### **Domande aperte** 
 
 - ☐ Ricontrollare a mano, noi due, le etichette di `data/count_check_labels.csv` (errore di conteggio). 
 
+- ☐ Rivedere le etichette di Claude del controllo a mano (`data/manual_check_CLAUDE_labels.xlsx`, colonna `REVIEWED BY`) e aggiornare `results/manual_check_summary.md` con chi le ha riviste. 
+
+- ☐ Chiedere al prof l'OK per la copia manuale delle 30 recensioni di citizenM Zürich. 
+
 - ☐ Data esatta del pitch finale e del feature freeze. 
 
-- ☐ Cosa dice il feedback scritto del prof sul mid-term (10 novembre). 
+- ☑ Feedback del prof sul mid-term (mail del 16 novembre): risultati come grafico o tabella in una pagina web, non screenshot del terminale; analisi dei concorrenti (domanda ancora aperta); una conversazione vera con un direttore d'hotel; demo dal vivo; una slide Trustworthy AI su "cosa succede se lo strumento sbaglia e il direttore ristruttura la cosa sbagliata". 
 
 - ☐ Il prof approva la copia manuale di recensioni per il test set svizzero? 
 
@@ -307,6 +335,8 @@ Se manca tempo si taglia in quest'ordine: video, confronto con l'LLM, DistilBERT
 |Documento di progetto iniziale (ottobre)|Progetto_recensioni_hotel.docx|
 |Campione da 300 recensioni per il Model 3|WWRSF_HotelReviewRegression.xlsx, foglio<br>"Recensioni"|
 |Script di prova di Claude (solo riferimento)|baseline.py,<br>analisi_frasi_miste.py|
+|Report punti di forza e debolezza (23 nov)|https://claude.ai/artifact/HCm1oZDk4THn9txEiniU4o|
+|Script del 23 novembre (branch `flavio-pre-web-development`)|`src/verify_full_texts.py`, `src/check_booking_hotel.py`, `src/check_pieces.py`, `src/explain_hotel.py`, `experiments/choose_thresholds.py`; risultati in `results/full_texts_check.csv`, `results/manual_check_summary.md`, `results/citizenm_zurich_points.png`|
 |Script nostri|Repository GitHub condivisa, branch `main`: pipeline finale in `src/` (topic_model.py, sentiment_model.py, pipeline.py, apply_topics.py, impact_full.py, report.py, verify_hotels.py); versioni precedenti e analisi di sensibilità in `experiments/` (impact_model.py, impact_nothing.py)|
 |Dataset|HRAST e 515K da Kaggle (link nella sezione I dati),<br>nella cartella<br>data/ esclusa da GitHub (vedi data/README.md)|
 |Materiale del corso|iMLDL-SemesterProject.pdf(brief),<br>5-Preparing-<br>Mid-Term-Talk.pdf, slide delle lezioni M01–M05|

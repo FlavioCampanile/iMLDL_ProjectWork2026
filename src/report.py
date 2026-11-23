@@ -1,6 +1,6 @@
 import pandas as pd
 from pipeline import (DATA_FOLDER, MODELS_FOLDER, TOPICS, sentiment_model, sentiment_vectorizer, predict_topics,
-                      make_windows, topics_of_many_texts, clean_negative, clean_positive)
+                      make_windows, topics_of_many_texts, clean_negative, clean_positive, split_full_text)
 
 # Report "what to fix first" for ONE hotel.
 # Importing this file does not run anything: the test at the end starts only with "python src/report.py".
@@ -161,11 +161,31 @@ def make_report(negative_texts, positive_texts):
     return {"n_reviews": n_reviews, "warning": warning,
             "fix_first": fix_first, "protect": protect}
 
+def make_report_from_full_texts(texts):
+    """Like make_report, but each review is ONE text (Google, TripAdvisor...), not two Booking fields.
+    The fixed rule + Model 2 (split_full_text in pipeline.py) rebuild the negative and the positive
+    text of each review; then make_report does the rest. The report also says how many pieces
+    were read and how many were put aside because Model 2 was not sure."""
+    negative_texts, positive_texts = [], []
+    n_pieces, n_aside = 0, 0
+    for text in texts:
+        negative, positive, pieces, aside = split_full_text(text)
+        negative_texts.append(negative)
+        positive_texts.append(positive)
+        n_pieces += pieces
+        n_aside += aside
+    report = make_report(negative_texts, positive_texts)
+    report["n_pieces"] = n_pieces
+    report["n_aside"] = n_aside
+    return report
+
 def print_report(report):
-    """Print the report returned by make_report."""
+    """Print the report returned by make_report (or by make_report_from_full_texts)."""
     if report["warning"] != "":
         print(report["warning"])
     print(f"Reviews read: {report['n_reviews']}")
+    if "n_pieces" in report:               # only for reviews written as one text
+        print(f"Pieces of text: {report['n_pieces']} - put aside (sentiment uncertain): {report['n_aside']}")
     print()
     print("FIX FIRST (topics clearly above the average of criticism)")
     if len(report["fix_first"]) == 0:

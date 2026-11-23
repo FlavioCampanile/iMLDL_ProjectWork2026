@@ -186,3 +186,113 @@ def clean_positive(text):
     """Format of the 515K + rule 1 (exact placeholders) for a positive text."""
     text = normalize_text(text)
     return remove_placeholder(text, EMPTY_POSITIVE)
+
+
+# ---------- Reviews written as ONE text (Google, TripAdvisor...): the fixed rule ----------
+# Booking divides a review into "liked" and "disliked"; most other platforms do not.
+# The fixed rule splits a whole review into pieces, Model 2 sends each piece to the
+# negative or to the positive side, and the uncertain pieces are put aside.
+# After that, the two sides go into the report exactly like the two Booking fields.
+
+# Words that usually turn the judgement around: the text is cut BEFORE them
+# ("The room was small but very clean" -> "The room was small" / "but very clean")
+CONTRAST_WORDS = ["but", "however", "although", "though", "except", "whereas", "unfortunately"]
+MIN_PIECE_WORDS = 2       # a shorter piece ("though") is glued back to the piece before it
+MIN_COMMA_PART_WORDS = 2  # same idea for the parts made by a comma
+
+# Model 2 probability of "positive": above HIGH -> positive side, below LOW -> negative side,
+# in between -> put aside (the model is not sure).
+# Chosen on 150 TRAIN hotels (experiments/choose_thresholds.py): 0.50 / 0.50, i.e. nothing is put aside.
+# Putting pieces aside lost more criticisms than it saved: 0.35 / 0.65 (the October idea) gave
+# a Fix first overlap of 0.817, 0.50 / 0.50 gave 0.850.
+LOW_POSITIVE = 0.50
+HIGH_POSITIVE = 0.50
+
+# True = the contrast word at the start of a piece is NOT shown to Model 2 ("but very clean" ->
+# Model 2 reads "very clean"): Model 2 learned from whole sentences, not from pieces starting with "but".
+# The piece itself keeps the word. Chosen with the thresholds in experiments/choose_thresholds.py
+# (its effect is very small: overlap 0.850 with, 0.847 without)
+STRIP_CONTRAST_WORD = True
+
+def glue_short_pieces(pieces, min_words):
+    """Glue every piece with fewer than `min_words` words to the piece before it
+    (the first piece, if short, is glued to the next one)."""
+    result = []
+    for piece in pieces:
+        if len(piece.split()) < min_words and len(result) > 0:
+            result[-1] = result[-1] + " " + piece
+        else:
+            result.append(piece)
+    # The first piece was short and nothing came before it: glue it to the second one
+    if len(result) >= 2 and len(result[0].split()) < min_words:
+        result[1] = result[0] + " " + result[1]
+        result = result[1:]
+    return result
+
+def split_review(text):
+    """Split ONE whole review into pieces, each with (ideally) one judgement.
+    1) cut on . ! ? ; and on new lines (= sentences)
+    2) inside a sentence, cut before a contrast word (but, however, ...)
+    3) cut on the commas only if the piece talks about two or more topics (Model 1)
+    The punctuation is still there: this must run BEFORE normalize_text."""
+    if not isinstance(text, str):              # a missing value (NaN) counts as empty
+        return []
+    pieces = []
+    # Step 1: sentences. [.!?;\n]+ = one or more of these characters in a row
+    for sentence in re.split(r"[.!?;\n]+", text):
+        if sentence.strip() == "":
+            continue
+        # Step 2: cut before each contrast word (\b = word boundary, so "but" never matches "button";
+        # (?=...) cuts BEFORE the word and keeps it in the next piece)
+        pattern = r"\b(?=(?:" + "|".join(CONTRAST_WORDS) + r")\b)"
+        parts = [p.strip(" ,") for p in re.split(pattern, sentence, flags=re.IGNORECASE)]
+        parts = [p for p in parts if p != ""]
+        pieces.extend(glue_short_pieces(parts, MIN_PIECE_WORDS))
+
+    # Step 3: commas, only in pieces with two or more topics ("Great location, rude staff")
+    # (Model 1 runs only on the pieces that have a comma: the others are never cut here)
+    result = []
+    for piece in pieces:
+        if "," in piece and len(predict_topics([normalize_text(piece)])[0]) >= 2:
+            parts = [p.strip() for p in piece.split(",") if p.strip() != ""]
+            result.extend(glue_short_pieces(parts, MIN_COMMA_PART_WORDS))
+        else:
+            result.append(piece)
+    return result
+
+def text_for_sentiment(piece):
+    """The piece without the contrast words at its start ("but however very clean" -> "very clean")."""
+    words = piece.split()
+    while len(words) > 1 and words[0].lower() in CONTRAST_WORDS:
+        words = words[1:]
+    return " ".join(words)
+
+def route_pieces(pieces, low=LOW_POSITIVE, high=HIGH_POSITIVE, strip_contrast=STRIP_CONTRAST_WORD):
+    """Send each piece to a side with Model 2. Return three lists of pieces:
+    negative, positive, put aside (probability of "positive" between low and high).
+    strip_contrast=True: Model 2 reads the piece without the contrast word at its start."""
+    negative, positive, aside = [], [], []
+    if len(pieces) == 0:
+        return negative, positive, aside
+    texts = [text_for_sentiment(p) for p in pieces] if strip_contrast else pieces
+    p_positive = sentiment_model.predict_proba(sentiment_vectorizer.transform(texts))[:, 1]
+    for piece, p in zip(pieces, p_positive):
+        if p >= high:
+            positive.append(piece)
+        elif p <= low:
+            negative.append(piece)
+        else:
+            aside.append(piece)
+    return negative, positive, aside
+
+def split_full_text(text, low=LOW_POSITIVE, high=HIGH_POSITIVE, strip_contrast=STRIP_CONTRAST_WORD):
+    """ONE whole review -> (negative text, positive text, number of pieces, number put aside).
+    Every piece is cleaned on its own first, so "No complaints" inside a longer review
+    is still recognized as "no criticism" (same rules as the Booking fields)."""
+    pieces = split_review(text)
+    negative, positive, aside = route_pieces(pieces, low, high, strip_contrast)
+    negative = [clean_negative(p) for p in negative]
+    positive = [clean_positive(p) for p in positive]
+    negative_text = " ".join(p for p in negative if p != "")
+    positive_text = " ".join(p for p in positive if p != "")
+    return negative_text, positive_text, len(pieces), len(aside)

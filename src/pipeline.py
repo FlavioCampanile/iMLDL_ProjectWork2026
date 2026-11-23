@@ -201,9 +201,18 @@ MIN_PIECE_WORDS = 2       # a shorter piece ("though") is glued back to the piec
 MIN_COMMA_PART_WORDS = 2  # same idea for the parts made by a comma
 
 # Model 2 probability of "positive": above HIGH -> positive side, below LOW -> negative side,
-# in between -> put aside (the model is not sure)
-LOW_POSITIVE = 0.35
-HIGH_POSITIVE = 0.65
+# in between -> put aside (the model is not sure).
+# Chosen on 150 TRAIN hotels (experiments/choose_thresholds.py): 0.50 / 0.50, i.e. nothing is put aside.
+# Putting pieces aside lost more criticisms than it saved: 0.35 / 0.65 (the October idea) gave
+# a Fix first overlap of 0.817, 0.50 / 0.50 gave 0.850.
+LOW_POSITIVE = 0.50
+HIGH_POSITIVE = 0.50
+
+# True = the contrast word at the start of a piece is NOT shown to Model 2 ("but very clean" ->
+# Model 2 reads "very clean"): Model 2 learned from whole sentences, not from pieces starting with "but".
+# The piece itself keeps the word. Chosen with the thresholds in experiments/choose_thresholds.py
+# (its effect is very small: overlap 0.850 with, 0.847 without)
+STRIP_CONTRAST_WORD = True
 
 def glue_short_pieces(pieces, min_words):
     """Glue every piece with fewer than `min_words` words to the piece before it
@@ -251,13 +260,22 @@ def split_review(text):
             result.append(piece)
     return result
 
-def route_pieces(pieces, low=LOW_POSITIVE, high=HIGH_POSITIVE):
+def text_for_sentiment(piece):
+    """The piece without the contrast words at its start ("but however very clean" -> "very clean")."""
+    words = piece.split()
+    while len(words) > 1 and words[0].lower() in CONTRAST_WORDS:
+        words = words[1:]
+    return " ".join(words)
+
+def route_pieces(pieces, low=LOW_POSITIVE, high=HIGH_POSITIVE, strip_contrast=STRIP_CONTRAST_WORD):
     """Send each piece to a side with Model 2. Return three lists of pieces:
-    negative, positive, put aside (probability of "positive" between low and high)."""
+    negative, positive, put aside (probability of "positive" between low and high).
+    strip_contrast=True: Model 2 reads the piece without the contrast word at its start."""
     negative, positive, aside = [], [], []
     if len(pieces) == 0:
         return negative, positive, aside
-    p_positive = sentiment_model.predict_proba(sentiment_vectorizer.transform(pieces))[:, 1]
+    texts = [text_for_sentiment(p) for p in pieces] if strip_contrast else pieces
+    p_positive = sentiment_model.predict_proba(sentiment_vectorizer.transform(texts))[:, 1]
     for piece, p in zip(pieces, p_positive):
         if p >= high:
             positive.append(piece)
@@ -267,12 +285,12 @@ def route_pieces(pieces, low=LOW_POSITIVE, high=HIGH_POSITIVE):
             aside.append(piece)
     return negative, positive, aside
 
-def split_full_text(text):
+def split_full_text(text, low=LOW_POSITIVE, high=HIGH_POSITIVE, strip_contrast=STRIP_CONTRAST_WORD):
     """ONE whole review -> (negative text, positive text, number of pieces, number put aside).
     Every piece is cleaned on its own first, so "No complaints" inside a longer review
     is still recognized as "no criticism" (same rules as the Booking fields)."""
     pieces = split_review(text)
-    negative, positive, aside = route_pieces(pieces)
+    negative, positive, aside = route_pieces(pieces, low, high, strip_contrast)
     negative = [clean_negative(p) for p in negative]
     positive = [clean_positive(p) for p in positive]
     negative_text = " ".join(p for p in negative if p != "")

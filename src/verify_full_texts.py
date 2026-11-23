@@ -1,9 +1,10 @@
 import json
+import re
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit, train_test_split
 from sklearn.metrics import f1_score
-from pipeline import (DATA_FOLDER, MODELS_FOLDER, TOPICS, clean_negative, clean_positive,
+from pipeline import (DATA_FOLDER, MODELS_FOLDER, TOPICS, CONTRAST_WORDS, clean_negative, clean_positive,
                       topics_of_many_texts, split_review, route_pieces, split_full_text)
 from report import make_report
 
@@ -198,6 +199,7 @@ for version, items in glued.items():
 
 hrast = pd.read_csv(DATA_FOLDER / "HRAST.csv", encoding="utf-8-sig").drop(columns=["Unnamed: 2"])
 mixed = hrast[(hrast["Aspect"] == 1)]["review"].drop_duplicates().tolist()   # never used to train Model 2
+# (Aspect = 1: see the note in the last step)
 simple = hrast.drop_duplicates(subset="review")
 simple = simple[(simple["positive"] + simple["negative"] + simple["neutral"] == 1) & (simple["neutral"] == 0)
                 & (simple["Aspect"] == 0)]
@@ -242,18 +244,24 @@ for name, pairs in results.items():
     neg_right = (neg["chosen"] == "neg").mean() * 100
     print(f"  {name:<22} right side {right:5.1f}% - put aside {aside:4.1f}% - criticisms on the negative side {neg_right:5.1f}%")
 
-# Mixed sentences (Aspect = 1: praise AND criticism in the same sentence, e.g. "nice room but noisy")
-split_count, both_sides = 0, 0
-for s in mixed:
-    pieces = split_review(s)
-    neg_p, pos_p, _ = route_pieces(pieces)
-    split_count += len(pieces) >= 2
-    both_sides += len(neg_p) > 0 and len(pos_p) > 0
-print()
-print(f"=== HRAST: {len(mixed)} mixed sentences (Aspect = 1) ===")
-print(f"  cut into 2 or more pieces by the rule: {split_count / len(mixed) * 100:.1f}%")
-print(f"  with pieces on BOTH sides (praise and criticism separated): {both_sides / len(mixed) * 100:.1f}%"
-      " (without the rule: 0%, a sentence has one side only)")
+# Sentences with Aspect = 1. Looking at them, Aspect = 1 seems to mean "more than one aspect (topic)
+# in the sentence", NOT "praise and criticism together": most have ONE sentiment ("Great location and
+# clean rooms"). So we also look at the ones with a contrast word (but, however...), which are the most
+# likely to mix praise and criticism ("plain breakfast but everything was good").
+# Only descriptive numbers: without a label for each piece we cannot say which cuts are right.
+pattern = r"\b(?:" + "|".join(CONTRAST_WORDS) + r")\b"
+with_contrast = [s for s in mixed if re.search(pattern, s, flags=re.IGNORECASE)]
+for name, group in [("all Aspect = 1", mixed), ("Aspect = 1 with a contrast word", with_contrast)]:
+    split_count, both_sides = 0, 0
+    for s in group:
+        pieces = split_review(s)
+        neg_p, pos_p, _ = route_pieces(pieces)
+        split_count += len(pieces) >= 2
+        both_sides += len(neg_p) > 0 and len(pos_p) > 0
+    print()
+    print(f"=== HRAST: {len(group)} sentences, {name} ===")
+    print(f"  cut into 2 or more pieces by the rule: {split_count / len(group) * 100:.1f}%")
+    print(f"  with pieces on BOTH sides: {both_sides / len(group) * 100:.1f}% (without the rule: 0%)")
 
 RESULTS_FOLDER.mkdir(exist_ok=True)
 summary.to_csv(RESULTS_FOLDER / "full_texts_check.csv", index=False)

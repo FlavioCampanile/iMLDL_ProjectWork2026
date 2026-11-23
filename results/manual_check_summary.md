@@ -1,8 +1,8 @@
 # Manual check of the fixed rule (23 Nov 2026)
 
-**Labels put by Claude (AI), not yet reviewed by a person.** Before using these numbers in the pitch or on
-the website, a team member must review the labels (column `REVIEWED BY (name) / CHANGED?` in the Excel file)
-and the text below must say who reviewed them.
+**Labels pre-assigned by an AI model (Claude) on 23 Nov 2026 and reviewed by Flavio Campanile and Filippo
+Strafile on 24 Nov 2026: all 178 labels were checked and confirmed, none was changed.** The numbers below are
+therefore our own reviewed labels. To declare as "pre-labelled with an AI model and reviewed by the team".
 
 File with all the labels: `data/manual_check_CLAUDE_labels.xlsx` (not on GitHub: it contains copied reviews).
 Created by `src/check_pieces.py`; settings of the rule: thresholds 0.50 / 0.50, contrast word removed.
@@ -54,6 +54,8 @@ bit far from the city center"), a praise left inside a negative piece ("the staf
 
 ## Limits of this check
 
-- One person labeled, and it was an AI: no agreement between two people can be measured yet.
+- The labels were pre-assigned by an AI and then reviewed by us, who agreed with all of them. We did not label
+  independently first, so the agreement between two people (or between us and the AI) was not measured, and
+  reading the AI label first may have influenced us.
 - One Swiss hotel, 30 reviews, all in English, copied from Booking (not Google).
 - 30 + 30 pieces in sections 2 and 3: the percentages have a wide margin of error.

@@ -341,9 +341,9 @@ Se manca tempo si taglia in quest'ordine: video, confronto con l'LLM, DistilBERT
 
 ### **Domande aperte** 
 
-- ☐ Ricontrollare a mano, noi due, le etichette di `data/count_check_labels.csv` (errore di conteggio). 
+- ☐ Ricontrollare a mano, noi due, le etichette di `data/count_check_labels.csv` (errore di conteggio). **Il file non è nel PC di Flavio (controllato il 24 nov): chiedere a Filippo.** Serve per la proposta (a) e per verificare la confidenza (b). 
 
-- ☐ Rivedere le etichette di Claude del controllo a mano (`data/manual_check_CLAUDE_labels.xlsx`, colonna `REVIEWED BY`) e aggiornare `results/manual_check_summary.md` con chi le ha riviste. 
+- ☑ Etichette di Claude del controllo a mano (`data/manual_check_CLAUDE_labels.xlsx`) riviste da Flavio e Filippo il 24 nov: tutte le 178 confermate, nessuna cambiata; `results/manual_check_summary.md` aggiornato. Da dichiarare come "pre-etichettate con un modello AI e riviste da noi". Limite: non abbiamo etichettato prima in modo indipendente, quindi l'accordo tra noi (o con l'AI) non è misurato. 
 
 
 - ☑ Date: consegna di tutto (codice, demo, sito, slide, extra) entro l'8 dicembre; presentazione del Gruppo 1 il 15 dicembre. 

@@ -1,9 +1,17 @@
-# Datasets and trained models are not shared on GitHub (licenses and file size).
-# Only the README files that explain how to recreate them are tracked.
+# data/: the Kaggle datasets (licenses, file size), the files created by the scripts
+# and the files with reviews copied by hand (texts written by hotel guests) stay off GitHub.
+# Only the small files made by the team that contain no review texts are tracked.
 data/*
 !data/README.md
+!data/Hotel_Database.xlsx
+# models/: the trained models are small and tracked, so the report and the demo run
+# without retraining. Recreate them with the scripts in src/ (see models/README.md).
 models/*
 !models/README.md
+!models/topic_model.joblib
+!models/sentiment_model.joblib
+!models/impact_weights.csv
+!models/impact_intercept.json
 
 # Python
 __pycache__/

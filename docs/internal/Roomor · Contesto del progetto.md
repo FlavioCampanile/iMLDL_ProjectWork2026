@@ -12,7 +12,7 @@ Roomor è il progetto semestrale del corso "Introduction to Machine Learning and
 
 - **Voto del progetto (60% del corso):** mid-term 15% (fatto il 20 ottobre), pitch finale 20%, codice 15%, sito web 10%; extra come bonus (video, demo interattiva, feedback utenti). L'esame scritto vale l'altro 40%. 
 
-- **Scadenze:** feature freeze in settimana 11, pitch finale con demo dal vivo in settimana 12 (circa 10 minuti). Data esatta da confermare. 
+- **Scadenze:** **tutto va consegnato entro l'8 dicembre** (settimana 11, feature freeze): codice, demo, sito, slide finali ed extra. Il Gruppo 1 presenta il **15 dicembre** (pitch di circa 10 minuti con demo dal vivo). 
 
 - **Obbligatorio:** una sezione "Trustworthy AI" con limiti, rischi e usi impropri, bias dei dati. 
 
@@ -93,6 +93,18 @@ Temi più frequenti in HRAST: Room 5,004, Location 4,729, Staff 3,804. Nel 515K 
 
 **Campione da 300 recensioni (file** **<mark>WWRSF_HotelReviewRegression.xlsx</mark> ).** 300 recensioni vere estratte a caso dal 515K (seed 42) tra le 474,087 che citano almeno uno di 5 temi: Staff, Room, Noise, Location, Restaurant. Le colonne <mark>Neg_<tema></mark> e <mark>Pos_<tema></mark> valgono 1 se nel testo negativo o positivo compare una parola chiave del tema. **I temi sono trovati con parole chiave, non a mano** : va sempre detto così. Le parole chiave sbagliano ("no towels left after service" contato come critica allo Staff). 
 
+**Catalogo degli hotel svizzeri (23 nov, file `data/Hotel_Database.xlsx`, su GitHub).** 40 hotel catalogati da Flavio, candidati per il test set svizzero 10 × 30. Colonne: `ID_Hotel`, `Name_Hotel`, `City`, `Cluster`, `Stars (Booking)`, `Restaurant`, `Wellness`, `Parking`, `Ski` (0/1), `Stato` (vuota). Per cluster: Urban/Business 26, Alpine Resort 9, Lakes/Mountain 5. Per stelle: 4★ 21, 3★ 17, 5★ 2. Servizi: ristorante 22, wellness 21, parcheggio 23, sci 8. Il primo hotel (H001, citizenM Zürich) è quello già usato nel test del 23 novembre.
+
+- **Zurigo (7):** H001 citizenM Zürich (4★), H005 Olympia Hotel Zurich (3★), H018 Hotel Limmatblick (3★), H019 Hotel Hirschen (3★), H020 Storchen Zürich (5★), H021 Placid Hotel Design (4★), H040 Crowne Plaza Zürich by IHG (4★)
+- **San Gallo (9):** H004 B&B HOTEL St Gallen (3★), H014 Hotel Walhalla (4★), H015 Hotel Dom (3★), H016 Radisson Blu Hotel (4★), H017 Oberwaid (4★), H034 Militärkantine St. Gallen (3★), H035 Sorell Boutique-Hotel City Weissenstein St Gallen (4★), H036 Einstein St. Gallen (4★), H037 Tailormade Hotel METROPOL St Gallen (4★)
+- **Ginevra (5):** H007 Nash Airport Hotel (4★), H008 Hilton Geneva Hotel (4★), H013 Warwick Geneva (4★), H025 ibis Genève Centre Nations (3★), H026 ibis Geneve Centre Lac (3★)
+- **Berna (3):** H022 Nydeck (3★), H023 Swissôtel Kursaal Bern (4★), H024 NH Bern The Bristol (4★)
+- **Losanna (2):** H030 Hotel Mirabeau (4★), H031 Swiss Wine by Fassbind (3★)
+- **Zermatt (8, Alpine Resort):** H002 Riffelalp Resort (5★), H006 Matterhorn Inn (3★), H009 Matterhorn Lodge Boutique Hotel (4★), H010 Schweizerhof Zermatt (4★), H011 Hotel Capricorn (3★), H012 Hotel Daniela (4★), H038 Hotel Bristol (3★), H039 Hotel Continental (3★)
+- **Crans-Montana (1, Alpine Resort):** H003 Hôtel Splendide (3★)
+- **Lugano (3, Lakes/Mountain):** H027 Suitenhotel Parco Paradiso (4★), H028 Hotel Colibrì (3★), H029 Villa Sassa (4★)
+- **Lucerna (2, Lakes/Mountain):** H032 Hotel Seeburg (4★), H033 Hotel Royal Luzern (3★)
+
 **Test set svizzero:** da costruire. Pilota di circa 10 hotel × 30 recensioni in inglese, etichettate a mano da noi due; serve l'approvazione del prof per la copia manuale. 
 
 ## **Cosa abbiamo fatto finora** 
@@ -130,7 +142,7 @@ HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disa
   - `experiments/` · versioni precedenti e analisi di sensibilità, fuori dalla pipeline finale: `impact_model.py` (Model 3 sulle 300 recensioni, mid-term) e `impact_nothing.py` (regola "nothing"). 
   - `app/` · la demo dal vivo (per ora solo un README). 
   - `docs/` · `CODE_EXPLANATION.md`, `TRUSTWORTHY_AI.md` (bozza con i titoli: limiti, rischi, usi impropri, bias dei dati) e `docs/internal/` con questo file e `To-Do-List.md`. 
-  - `data/` (sempre minuscolo: su Mac e Linux `Data` è un'altra cartella) e `models/` · restano fuori da GitHub, ma ora ognuna ha un `README.md` tracciato che dice quali file metterci e da quale script nascono. 
+  - `data/` (sempre minuscolo: su Mac e Linux `Data` è un'altra cartella) e `models/` · ognuna ha un `README.md` tracciato che dice quali file metterci e da quale script nascono. **Aggiornato il 23 nov:** vedi "Cosa va su GitHub" qui sotto. 
   - Nella radice: `README.md` riscritto in inglese per la consegna (nome Roomor, struttura, pipeline, come riprodurre i risultati, dati e licenze), `requirements.txt` con le versioni usate, `.gitignore` aggiornato. 
 
 - **Come si lanciano ora gli script:** per esempio `python src/topic_model.py` dalla cartella principale. Ogni script trova `data/` e `models/` partendo dalla propria posizione, quindi funziona da qualunque cartella. Controllato: tabella su 1,000 recensioni identica, report identico, Model 1 e 2 riaddestrati identici.
@@ -194,12 +206,12 @@ Domanda di partenza: il prodotto funziona con recensioni nuove di un hotel mai v
 - **Soglie scelte su 150 hotel di train** (`experiments/choose_thresholds.py`), con una regola decisa prima: si cambia solo se la sovrapposizione dei temi di Fix first con i campi Booking migliora di più di 0.01. Risultato: **0.50 / 0.50** (nessun pezzo messo da parte: con 0.35 / 0.65 si perdevano più critiche di quante se ne salvassero; 0.817 → 0.850) e parola di contrasto tolta prima del Model 2 (effetto minimo: 0.850 contro 0.847). L'idea di ottobre di "mettere da parte i pezzi incerti" è abbandonata.
 - **Test sui 224 hotel, guardato una volta dopo la scelta** (`src/verify_full_texts.py`): "liked" e "disliked" del 515K incollati in un testo unico. Con un punto tra le due parti: F1 temi criticati 0.921, lodati 0.951; stesso n. 1 in Fix first nell'**81.7%** degli hotel (Model 2 senza tagli 40.6%, tutto nel lato negativo 5.4%); correlazione voto previsto / vero 0.896 (campi Booking 0.907). Senza punteggiatura la regola aiuta poco (stesso n. 1 nel 50%). HRAST con punteggiatura: 92.6% delle frasi dalla parte giusta (senza tagli 67.9%). Unico numero che non migliora: MAE per hotel 0.314 contro 0.301 del Model 2 senza tagli, che però sbaglia il n. 1 nel 59% degli hotel.
 - **Correzione:** in HRAST **Aspect = 1 vuol dire "più temi nella frase", non "lode e critica insieme"** ("Great location and clean rooms"). Sulle 864 frasi con Aspect = 1 e una parola di contrasto la regola taglia il 97.5% e separa lode e critica nel 59.8%.
-- **Hotel svizzero mai visto: citizenM Zürich**, 30 recensioni Booking (lug–nov 2026) copiate a mano da Flavio, in `data/citizenm_zurich_booking.csv` (senza nomi degli ospiti, fuori da GitHub; 21 con i due blocchi distinguibili). Script `src/check_booking_hotel.py`: 91.7% dei pezzi dalla parte giusta; F1 temi 0.925 / 0.930; **Fix first (Room, Noise, Facilities, Comfort) e Protect (Staff, Hotel overall, Location) identici** a quelli costruiti dai blocchi Booking.
+- **Hotel svizzero mai visto: citizenM Zürich**, 30 recensioni Booking (lug–nov 2026) copiate a mano da Flavio, in `data/citizenm_zurich_booking.csv` (senza nomi degli ospiti, fuori da GitHub; l'OK del prof per la copia manuale non serve, decisione del 23 nov; 21 con i due blocchi distinguibili). Script `src/check_booking_hotel.py`: 91.7% dei pezzi dalla parte giusta; F1 temi 0.925 / 0.930; **Fix first (Room, Noise, Facilities, Comfort) e Protect (Staff, Hotel overall, Location) identici** a quelli costruiti dai blocchi Booking.
 - **Model 3 su citizenM** (`src/explain_hotel.py`, grafico `results/citizenm_zurich_points.png`): voto medio previsto **8.17 contro 8.33 vero** (errore 0.16; sui 224 hotel l'errore medio era 0.31). Per singola recensione invece MAE 0.64 contro 0.58 della baseline "sempre 8.37", correlazione 0.48: va usato solo il dato aggregato. Punti persi −0.85 (Room −0.22, Cleanliness −0.09, Bed −0.08, Noise −0.08), guadagnati +0.69 (Staff +0.25).
 - **Controllo a mano** (`src/check_pieces.py` → `data/manual_check.xlsx`; **etichette messe da Claude**, in `data/manual_check_CLAUDE_labels.xlsx`, riassunto in `results/manual_check_summary.md`, **da rivedere da noi** e da dichiarare come "pre-etichettate con un modello AI e riviste da noi"): citizenM 118 pezzi, tagli giusti 93.2%, lato giusto 92.8%, **critiche nel lato negativo 46 / 46**; tutti gli errori sono lodi o fatti neutri letti come critiche (circa 21% dei pezzi negativi; esempio "didn't hear a thing from inside our room" contato sotto Noise). Dei 30 pezzi "sbagliati" del 515K solo il 47% sono errori veri (37% errori dell'ospite nel campo Booking). Frasi HRAST con "but": 23 / 30 giuste.
 - **Quante recensioni servono** (prova veloce di Claude con uno script temporaneo, non nella repo): 16 hotel di test con almeno 800 recensioni, 60 campioni per dimensione. Stesso n. 1 del report completo: 30 recensioni 53%, 100 69%, 200 80%, 300 85%, 500 91%. Il voto medio si stabilizza già a 100 (errore 0.08). Proposta: ultimi 12–18 mesi, almeno 100 recensioni.
 - **Report di punti di forza e debolezza**, con le informazioni da aggiungere: documento "Roomor · Punti di forza e debolezza" (link nella sezione File e link).
-- **Prossimi passi:** Filippo rivede codice e numeri, poi fa il merge in `main`; rivedere le etichette di Claude; chiedere al prof l'OK per la copia manuale delle recensioni di citizenM; poi demo (Streamlit) e sito.
+- **Prossimi passi:** Filippo rivede codice e numeri, poi fa il merge in `main`; rivedere le etichette di Claude; poi si segue l'ordine della To-Do list (`docs/internal/To-Do-List.md`).
 
 |Quando|Cosa|Risultato|
 |---|---|---|
@@ -222,6 +234,14 @@ Domanda di partenza: il prodotto funziona con recensioni nuove di un hotel mai v
 
 **Nota sui numeri.** Prima del mid-term Claude aveva fatto dei prototipi per verificare la fattibilità (per esempio Model 1 con micro-F1 circa 0.86 contro 0.80 delle parole chiave). Non sono risultati nostri: valgono solo come riferimento per capire se siamo sulla strada giusta. Anche il controllo dei pesi del Model 3 sull'intero 515K (Staff −1.08, Room −1.07) l'ha fatto Claude, non il nostro codice. 
 
+### **Aggiornamento 23 novembre, sera: cosa va su GitHub.**
+
+- **Su GitHub:** `data/README.md`, `data/Hotel_Database.xlsx` (catalogo dei 40 hotel) e i modelli addestrati in `models/` (`topic_model.joblib` 1.2 MB, `sentiment_model.joblib` 0.2 MB, `impact_weights.csv`, `impact_intercept.json`). Report e demo funzionano subito dopo il clone, senza riaddestrare; i file `.joblib` vanno caricati con scikit-learn 1.8.0.
+- **Fuori da GitHub, da Kaggle:** `HRAST.csv`, `Hotel_Reviews.csv` (238 MB, oltre il limite di 100 MB di GitHub).
+- **Fuori da GitHub, creati dagli script:** `review_topics.csv` (77 MB), `hrast_train/val/test.csv`, `manual_check.xlsx`.
+- **Fuori da GitHub, con recensioni copiate a mano (si condividono su Drive):** `citizenm_zurich_booking.csv`, `google_check.xlsx`, `manual_check.xlsx`, `manual_check_CLAUDE_labels.xlsx`, `WWRSF_HotelReviewRegression.xlsx`. Attenzione: anche i file del controllo a mano contengono i testi delle recensioni, per questo restano fuori.
+- Aggiornati `.gitignore`, `data/README.md`, `models/README.md`, `README.md` e `docs/CODE_EXPLANATION.md`.
+
 ## **Decisioni prese e perché** 
 
 |Decisione|Perché|
@@ -242,7 +262,9 @@ Domanda di partenza: il prodotto funziona con recensioni nuove di un hotel mai v
 |Train / validation / test (70 / 15 / 15, seed 42)<br>da qui in poi|Serve il validation appena si sceglie qualcosa: soglie<br>per tema, regolarizzazione, regressione logistica o<br>DistilBERT|
 |DistilBERT solo se batte la regressione logistica<br>sul test|È meno spiegabile e più costoso: deve guadagnarsi il<br>posto|
 |Niente scraping|Termini di Booking.com, sezione A15.2|
-|Dataset mai su GitHub|Licenze e dimensione dei file; si scaricano da Kaggle<br>seguendo il README|
+|Dataset Kaggle mai su GitHub|Licenze e dimensione dei file; si scaricano da Kaggle<br>seguendo il README|
+|Su GitHub i file piccoli del team senza testi di recensioni e i modelli addestrati (23 nov)|Filippo deve avere i file che crea Flavio; i modelli (1.4 MB in tutto) servono a report e demo senza riaddestrare|
+|Recensioni copiate a mano mai su GitHub (23 nov)|Sono testi scritti dagli ospiti, pubblicati su Booking / Google alle loro condizioni: rimetterli in una repo è una ripubblicazione che non serve al progetto (bastano numeri e grafici); si condividono tra noi su Drive|
 |Soglie della regola fissa 0.50 / 0.50, nessun pezzo messo da parte (23 nov)|Scelte su 150 hotel di train con una regola decisa prima: mettere da parte i pezzi incerti perdeva più critiche di quante ne salvasse (sovrapposizione Fix first 0.817 → 0.850)|
 |Il voto della singola recensione non si mostra al direttore (23 nov)|Su citizenM il Model 3 per recensione fa peggio della baseline (MAE 0.64 contro 0.58); il voto aggregato dell'hotel invece è accurato (8.17 contro 8.33)|
 
@@ -294,9 +316,8 @@ Se manca tempo si taglia in quest'ordine: video, confronto con l'LLM, DistilBERT
 
 - ☐ Rivedere le etichette di Claude del controllo a mano (`data/manual_check_CLAUDE_labels.xlsx`, colonna `REVIEWED BY`) e aggiornare `results/manual_check_summary.md` con chi le ha riviste. 
 
-- ☐ Chiedere al prof l'OK per la copia manuale delle 30 recensioni di citizenM Zürich. 
 
-- ☐ Data esatta del pitch finale e del feature freeze. 
+- ☑ Date: consegna di tutto (codice, demo, sito, slide, extra) entro l'8 dicembre; presentazione del Gruppo 1 il 15 dicembre. 
 
 - ☑ Feedback del prof sul mid-term (mail del 16 novembre): risultati come grafico o tabella in una pagina web, non screenshot del terminale; analisi dei concorrenti (domanda ancora aperta); una conversazione vera con un direttore d'hotel; demo dal vivo; una slide Trustworthy AI su "cosa succede se lo strumento sbaglia e il direttore ristruttura la cosa sbagliata". 
 
@@ -325,6 +346,7 @@ Se manca tempo si taglia in quest'ordine: video, confronto con l'LLM, DistilBERT
 |Cosa|Dove|
 |---|---|
 |Questo file di contesto|`docs/internal/` nella repository (branch `main`)|
+|To-Do list in ordine di fase (aggiornata da Claude)|`docs/internal/To-Do-List.md`|
 |Guida al codice riga per riga (inglese)|`docs/CODE_EXPLANATION.md`|
 |Roadmap fino al pitch finale|documento|
 |Guida per le domande tecniche (italiano)|documento|
@@ -333,6 +355,7 @@ Se manca tempo si taglia in quest'ordine: video, confronto con l'LLM, DistilBERT
 |Slide del mid-term, versione finale|iMLDL_mid-term_group1.pdf(10 slide) e<br>iMLDL_mid-term.pptx|
 |Bozza delle slide (prima versione)|deck|
 |Documento di progetto iniziale (ottobre)|Progetto_recensioni_hotel.docx|
+|Catalogo dei 40 hotel svizzeri (candidati per il test set)|`data/Hotel_Database.xlsx` (su GitHub)|
 |Campione da 300 recensioni per il Model 3|WWRSF_HotelReviewRegression.xlsx, foglio<br>"Recensioni"|
 |Script di prova di Claude (solo riferimento)|baseline.py,<br>analisi_frasi_miste.py|
 |Report punti di forza e debolezza (23 nov)|https://claude.ai/artifact/HCm1oZDk4THn9txEiniU4o|

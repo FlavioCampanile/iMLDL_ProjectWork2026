@@ -37,8 +37,8 @@ iMLDL_ProjectWork2026/
 │   ├── CODE_EXPLANATION.md  line-by-line guide to the code
 │   ├── TRUSTWORTHY_AI.md    limits, risks, misuse, data bias (draft)
 │   └── internal/            team notes (project context, to-do list)
-├── data/                  datasets – NOT on GitHub (see data/README.md)
-└── models/                trained models – NOT on GitHub (see models/README.md)
+├── data/                  datasets – only the team's hotel catalogue is on GitHub (see data/README.md)
+└── models/                trained models (Model 1, 2 and 3) – on GitHub (see models/README.md)
 ```
 
 ## Pipeline
@@ -53,7 +53,7 @@ iMLDL_ProjectWork2026/
 
 ## How to reproduce the results
 
-`data/` and `models/` are excluded from git, so after cloning you have to recreate them on your computer.
+The trained models are already in `models/`: to produce a report you do not need to retrain anything, only to download the 515K dataset (step 2). The Kaggle datasets are not on GitHub (licenses and file size), nor are the files with reviews copied by hand (see `data/README.md`). Running the scripts below recreates the models and every number from scratch.
 
 **1. Install the libraries** (results obtained with Python 3.12):
 

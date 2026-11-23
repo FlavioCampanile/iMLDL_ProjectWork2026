@@ -14,7 +14,7 @@ python src/sentiment_model.py
 python experiments/impact_model.py
 ```
 
-The datasets are **not** on GitHub (`data/` is in `.gitignore`): the Kaggle links are in the README.
+The datasets are **not** on GitHub (licenses and file size): the Kaggle links are in the README. The trained models are on GitHub, in `models/` (see `models/README.md`).
 
 ---
 

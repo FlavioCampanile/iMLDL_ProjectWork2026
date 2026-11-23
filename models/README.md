@@ -10,4 +10,4 @@ The trained models are **on GitHub** (they are small), so the report and the dem
 
 The `.joblib` files were saved with scikit-learn 1.8.0 (see `requirements.txt`): load them with the same version. Running the scripts again recreates the same files (same numbers with the versions in `requirements.txt`).
 
-DistilBERT (experiment on Model 1, 268 MB) is **not** here: it is trained with the notebooks in `notebooks/` on Google Colab.
+DistilBERT (experiment on Model 1, 268 MB) is **not** here and is **not** used by the product: it is trained with the notebooks in `notebooks/` on Google Colab and compared in `experiments/compare_distilbert.py`. It beats TF-IDF on HRAST sentences but was not tested on hotels never seen (see `docs/CODE_EXPLANATION.md`, Part 9).

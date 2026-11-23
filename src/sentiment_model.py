@@ -55,7 +55,11 @@ print("Percentage of positive:", round(df["label"].mean() * 100, 2), "%")
 X = df["review"]
 y = df["label"]
 
-# Split: 85% train, 15% test; random_state fixes the randomness; stratify keeps the class proportions
+# Split: 85% train, 15% test; random_state fixes the randomness; stratify keeps the class proportions.
+# No validation set, on purpose: this script chooses NOTHING (threshold 0.5 and default settings of
+# LogisticRegression), so a validation set would never be used and the test is used once, only to measure.
+# The settings that ARE chosen around Model 2 (thresholds of the fixed rule) are chosen on 150 train
+# hotels of the 515K in experiments/choose_thresholds.py, never on the test hotels.
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.15, random_state=42, stratify=y
 )
@@ -109,7 +113,8 @@ for i in order[::-1][:10]:
 
 # ---------- Save the model ----------
 
-# Save the vectorizer and the model in one file, to use them in apply_topics.py
+# Save the vectorizer and the model in one file: pipeline.py loads them (fixed rule, report examples,
+# optional "nothing" rule)
 MODELS_FOLDER.mkdir(exist_ok=True)
 joblib.dump({"vectorizer": vectorizer, "model": model}, MODELS_FOLDER / "sentiment_model.joblib")
 print()

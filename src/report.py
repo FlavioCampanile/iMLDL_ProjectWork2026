@@ -12,6 +12,14 @@ MIN_REVIEWS = 30   # with fewer reviews than this, the report shows a warning
 MIN_GAP = 0.05     # a topic enters "Fix first" only if the hotel exceeds the average by 5 percentage points...
 MIN_CRITICS = 5    # ...and at least 5 reviews criticize the topic
 
+# Confidence of each "Fix first" topic. Model 1 finds the TOPIC, not the judgement: praise written in the
+# negative field ("the staff could not have been nicer") is still counted as a criticism. So, for each topic,
+# the report also says how many of the reviews that criticize it Model 2 reads as really negative.
+# It never changes the counts or the ranking (the weights of Model 3 were learned without this filter).
+SOUNDS_NEGATIVE = 0.50   # a window "sounds negative" if Model 2 gives P(positive) below this (as in the fixed rule)
+LOW_CONFIDENCE = 0.50    # below this share of negative-sounding reviews the report says "check the examples"
+                         # (to be checked with the manual labels: low confidence should mean more wrong counts)
+
 # Weights removed from the reliable ones by hand. Neg_Bar: with 200 bootstrap resamples its interval
 # is just below zero (-0.060, -0.001), but with 1,000 resamples it touches zero (-0.061, +0.002)
 EXCLUDED_WEIGHTS = ["Neg_Bar"]
@@ -93,13 +101,40 @@ def find_examples(texts, topics_per_text, topic, most_positive, used_windows):
             break
     return examples
 
+def negative_sounding_reviews(texts, topics_per_text, topics):
+    """For each topic in `topics`: the set of reviews that contain the topic AND have at least one window
+    where Model 1 finds the topic and Model 2 reads it as negative (P(positive) < SOUNDS_NEGATIVE).
+    All the windows go to the two models in one call (fast)."""
+    windows = []
+    owner = []                                 # owner[k] = review that window k comes from
+    for i, (text, review_topics) in enumerate(zip(texts, topics_per_text)):
+        if not any(topic in review_topics for topic in topics):
+            continue                           # this review contains none of the topics: skip it
+        for window in make_windows(text):
+            windows.append(window)
+            owner.append(i)
+    result = {topic: set() for topic in topics}
+    if len(windows) == 0:
+        return result
+    window_topics = predict_topics(windows)
+    p_positive = sentiment_model.predict_proba(sentiment_vectorizer.transform(windows))[:, 1]
+    for k in range(len(windows)):
+        if p_positive[k] < SOUNDS_NEGATIVE:
+            for topic in topics:
+                # the review must contain the topic (same count as Fix first) and this window must have it
+                if topic in window_topics[k] and topic in topics_per_text[owner[k]]:
+                    result[topic].add(owner[k])
+    return result
+
 def count_reviews(topics_per_text, topic):
     """Number of reviews that contain the topic."""
     return sum(1 for topics in topics_per_text if topic in topics)
 
 def make_report(negative_texts, positive_texts):
     """Receive the negative and the positive texts of ONE hotel (one of each per review, "" if
-    missing) and return the report: a dictionary with n_reviews, warning, fix_first and protect."""
+    missing) and return the report: a dictionary with n_reviews, warning, fix_first and protect.
+    Each Fix first row also has n_negative (reviews that criticize the topic AND sound negative to Model 2),
+    confidence (n_negative / n_critics) and check (True if the confidence is below LOW_CONFIDENCE)."""
     if len(negative_texts) != len(positive_texts) or len(negative_texts) == 0:
         raise ValueError("We need the same number (at least 1) of negative and positive texts")
 
@@ -133,7 +168,19 @@ def make_report(negative_texts, positive_texts):
                               "weight": weight, "points": share * weight,
                               "extra_points": gap * weight, "examples": []})
     fix_first.sort(key=lambda row: row["extra_points"])   # the most negative first
-    for row in fix_first[:N_TOP]:
+
+    # Confidence: how many of the reviews that criticize the topic sound really negative to Model 2
+    sounding = negative_sounding_reviews(neg_texts, neg_topics, [row["topic"] for row in fix_first])
+    for row in fix_first:
+        row["n_negative"] = len(sounding[row["topic"]])
+        row["confidence"] = row["n_negative"] / row["n_critics"]
+        row["check"] = row["confidence"] < LOW_CONFIDENCE
+
+    # Examples for the first N_TOP topics, and also for every topic with low confidence
+    # (the report asks the manager to check them, so they must be there)
+    for i, row in enumerate(fix_first):
+        if i >= N_TOP and not row["check"]:
+            continue
         row["examples"] = find_examples(neg_texts, neg_topics, row["topic"],
                                         most_positive=False, used_windows=used_windows)
 
@@ -191,10 +238,15 @@ def print_report(report):
     if len(report["fix_first"]) == 0:
         print("     No topic is clearly worse than the average hotel")
     else:
-        print(f"     {'Topic':<33}{'Criticized':>11}{'Average':>9}{'Weight':>9}{'vs average':>12}{'Total':>9}")
+        print(f"     {'Topic':<33}{'Criticized':>11}{'Average':>9}{'Weight':>9}{'vs average':>12}{'Total':>9}"
+              f"{'Sound negative':>16}")
     for i, row in enumerate(report["fix_first"], start=1):
         print(f"{i:>3}. {row['name']:<33}{row['share'] * 100:>10.1f}%{row['average'] * 100:>8.1f}%"
-              f"{row['weight']:>9.2f}{row['extra_points']:>12.3f}{row['points']:>9.3f}")
+              f"{row['weight']:>9.2f}{row['extra_points']:>12.3f}{row['points']:>9.3f}"
+              f"{str(row['n_negative']) + ' of ' + str(row['n_critics']):>16}")
+        if row["check"]:
+            print(f"       ! only {row['n_negative']} of {row['n_critics']} reviews sound negative: "
+                  "some may be praise, check the examples before deciding")
         for example in row["examples"]:
             print(f"       \"{example}\"")
     print()

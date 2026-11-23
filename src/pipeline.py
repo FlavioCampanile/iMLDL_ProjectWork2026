@@ -191,7 +191,7 @@ def clean_positive(text):
 # ---------- Reviews written as ONE text (Google, TripAdvisor...): the fixed rule ----------
 # Booking divides a review into "liked" and "disliked"; most other platforms do not.
 # The fixed rule splits a whole review into pieces, Model 2 sends each piece to the
-# negative or to the positive side, and the uncertain pieces are put aside.
+# negative or to the positive side (with LOW = HIGH = 0.50 no piece is put aside: see below).
 # After that, the two sides go into the report exactly like the two Booking fields.
 
 # Words that usually turn the judgement around: the text is cut BEFORE them

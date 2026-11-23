@@ -35,7 +35,9 @@ pos_topics = topics_of_many_texts([clean_positive(s[1]) for s in sides])
 weights = pd.read_csv(MODELS_FOLDER / "impact_weights.csv", index_col="topic")["coef"]
 with open(MODELS_FOLDER / "impact_intercept.json") as f:
     intercept = json.load(f)["intercept"]
-TRAIN_MEAN = 8.372                    # baseline of impact_full.py: mean score of the train reviews
+# Baseline of impact_full.py: mean score of the train reviews, as printed by impact_full.py
+# ("Train mean score"). Written by hand: update it if Model 3 is trained again on other data.
+TRAIN_MEAN = 8.372
 
 rows = []
 for i, (neg, pos) in enumerate(zip(neg_topics, pos_topics)):

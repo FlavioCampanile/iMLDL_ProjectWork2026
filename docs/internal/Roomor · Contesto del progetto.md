@@ -61,7 +61,7 @@ pipeline · 1 rule, 3 models, 2 datasets
 |---|---|---|---|---|---|
 ||parole|||||
 |Model 1 ·<br>temi|Quali dei 21 temi cita<br>un pezzo di frase|Classificazione<br>multi-etichetta:<br>21 regressioni<br>logistiche su TF-<br>IDF, soglia per<br>tema|Parole<br>chiave<br>scritte a<br>mano;<br>"sempre<br>Room"|F1 per tema,<br>micro e<br>macro F1|**Fatto (17**<br>**nov), micro**<br>**F1 0.857**|
-|Model 2 ·<br>sentiment|Positivo o negativo,<br>con probabilità|Classificazione<br>binaria:<br>regressione<br>logistica su TF-<br>IDF|Sempre<br>"positive";<br>parole<br>chiave|Accuracy, F1|Fatto (da<br>rifare con<br>validation)|
+|Model 2 ·<br>sentiment|Positivo o negativo,<br>con probabilità|Classificazione<br>binaria:<br>regressione<br>logistica su TF-<br>IDF|Sempre<br>"positive";<br>parole<br>chiave|Accuracy, F1|Fatto (senza<br>validation: non<br>sceglie nulla,<br>decisione 23 nov)|
 |Model 3 ·<br>impatto|Punti di voto persi o<br>guadagnati per tema|Regressione<br>lineare multipla,<br>temi criticati e<br>lodati come<br>colonne 0/1|Voto medio<br>per ogni<br>recensione|MAE, R²,<br>bootstrap|Fatto su<br>tutto il 515K<br>(17 nov):<br>MAE 0.97 su<br>hotel mai<br>visti; 37 pesi<br>su 42<br>affidabili al<br>bootstrap<br>per hotel|
 
 
@@ -193,9 +193,9 @@ HRAST non vale su dati diversi. Una regola mirata su "nothing…" è tenuta disa
 
 - **Risultato della regola (22 novembre): DistilBERT si tiene, tutti e tre i seed battono 0.857 / 0.852.** Test micro / macro F1: seed 42 0.8898 / 0.8774 (epoca 7), seed 1 0.8908 / 0.8780 (epoca 7), seed 2 0.8901 / 0.8832 (epoca 8). **Media 0.8903 / 0.8795, minimo 0.8898 / 0.8774.** Per tutti i seed gli intervalli al 95% della differenza con il TF-IDF non contengono lo zero. 17 temi su 21 migliorano con tutti e tre i seed; in media peggiorano solo Lift (−0.011, 43 frasi) e Restaurant (−0.007, 53 frasi), differenze incerte. Errori totali da 1,620 a 1,229 / 1,227 / 1,225. Stesse versioni per tutti gli addestramenti a 8 epoche (torch 2.14.1+cu130, transformers 5.22.1, Tesla T4). Quaderno: `notebooks/distilbert_topics_seeds.ipynb`.
 
-- **Modello da usare: seed 42** (cartella Drive Roomor/distilbert_topics_8epochs/model). Il seed 2 ha il macro F1 più alto, ma sceglierlo dopo aver visto il test sarebbe proprio l'errore da evitare, e la differenza è minima. Nel pitch si riportano media e minimo dei tre seed.
+- **Modello di riferimento: seed 42** (cartella Drive Roomor/distilbert_topics_8epochs/model). Il seed 2 ha il macro F1 più alto, ma sceglierlo dopo aver visto il test sarebbe proprio l'errore da evitare, e la differenza è minima. Nel pitch si riportano media e minimo dei tre seed. **Aggiornamento 23 nov: DistilBERT non entra nel prodotto (opzione A), vedi sotto.**
 
-- **Prossimi passi:** noi due ricontrolliamo le 114 etichette; DistilBERT sulle 50 recensioni per vedere se conta meno critiche sbagliate; tempo su un campione del 515K, poi si decide se applicarlo a tutto. Secondo criterio: battere il MAE 0.97 su hotel mai visti (non ancora provato). 
+- **Prossimi passi (superati il 23 nov):** l'idea era provare DistilBERT sulle 50 recensioni e poi decidere se applicarlo al 515K. Il 23 novembre si è scelta l'opzione A: resta un esperimento; la prova sulle 50 recensioni è nella To-Do list come opzionale (opzione B). Secondo criterio (MAE 0.97 su hotel mai visti): mai provato. 
 
 ### **Aggiornamento 23 novembre (Flavio, branch `flavio-pre-web-development`).**
 
@@ -242,6 +242,33 @@ Domanda di partenza: il prodotto funziona con recensioni nuove di un hotel mai v
 - **Fuori da GitHub, con recensioni copiate a mano (si condividono su Drive):** `citizenm_zurich_booking.csv`, `google_check.xlsx`, `manual_check.xlsx`, `manual_check_CLAUDE_labels.xlsx`, `WWRSF_HotelReviewRegression.xlsx`. Attenzione: anche i file del controllo a mano contengono i testi delle recensioni, per questo restano fuori.
 - Aggiornati `.gitignore`, `data/README.md`, `models/README.md`, `README.md` e `docs/CODE_EXPLANATION.md`.
 
+### **Aggiornamento 23 novembre, notte: guida al codice riscritta.**
+
+- `docs/CODE_EXPLANATION.md` copriva solo `sentiment_model.py` e il Model 3 del mid-term (2 script su 16). Ora spiega **tutto il codice** nell'ordine della pipeline: idee comuni → Model 1 → Model 2 → `pipeline.py` (pulizia, finestre, regola fissa) → `apply_topics.py` → `impact_full.py` → `report.py` → verifiche su hotel mai visti (`verify_hotels`, `verify_full_texts`, `check_booking_hotel`, `explain_hotel`, `check_pieces`) → esperimenti (`choose_thresholds`, `impact_nothing`, `impact_model`) → DistilBERT (`export_split`, quaderni, `compare_distilbert`). In fondo: cose da sapere prima della presentazione, 24 domande possibili del prof, glossario.
+- Corretto: Aspect = 1 vuol dire "più temi nella frase", non "frase mista".
+- Trovate tre piccole incoerenze nei **commenti** del codice (nessun effetto sui risultati), **corrette lo stesso giorno** (fase 1): `pipeline.py` dice ancora che i pezzi incerti "vengono messi da parte" (con 0.50 / 0.50 nessuno lo è); il commento finale di `sentiment_model.py` dice che il modello serve ad `apply_topics.py` (lo usa tramite `pipeline.py`); `explain_hotel.py` scrive a mano la media del train 8.372 invece di leggerla.
+- La guida dice esplicitamente le due decisioni ancora aperte: DistilBERT non collegato al report, Model 2 senza validation (entrambe prese poco dopo, vedi il paragrafo successivo).
+
+### **Aggiornamento 23 novembre, notte: decisioni sul codice (fase 1).**
+
+- **DistilBERT sul Model 1: opzione A, resta un esperimento documentato e NON entra nel prodotto.** Il report continua a usare il TF-IDF. Motivi:
+  1. Ha superato solo il primo dei due criteri decisi il 22 novembre (battere il TF-IDF sulle frasi di HRAST). Il secondo (battere il MAE 0.97 su hotel mai visti, cioè migliorare il prodotto vero) non è mai stato provato: tenerlo comunque vorrebbe dire cambiare la regola dopo aver visto i risultati.
+  2. Non corregge l'errore più grande misurato: il Model 1 dice di cosa parla un pezzo, non se è una critica (lodi scritte nel campo "disliked" contate come critiche).
+  3. Collegarlo vuol dire rifare tutta la catena: DistilBERT su 515K recensioni divise in finestre (ore di GPU su Colab), nuovo Model 3, nuove verifiche, tutti i numeri cambiano. Circa 3–5 giorni prima dell'8 dicembre.
+  4. 268 MB e molto lento senza GPU: la pipeline non girerebbe più su un portatile normale seguendo il README, e la demo online gratuita rischierebbe crash o attese di minuti.
+  - Frase per il pitch: "abbiamo provato il deep learning: è migliore sulle frasi; prima di metterlo nel prodotto deve dimostrare di migliorare il report, ed è il nostro prossimo passo".
+- **Opzionali messi nella To-Do list (fase 1):** opzione B (DistilBERT sul Model 1 provato sulle 50 recensioni del controllo di conteggio, solo per arricchire il pitch) e **DistilBERT sul Model 2** (sentiment), mai provato finora. Sul Model 2 renderebbe di più: colpisce un errore vero della regola fissa (es. "didn't hear a thing" letto come critica) e non obbliga a rifare tabella e Model 3, perché il Model 2 serve solo alla regola fissa e agli esempi del report. Non risolve le lodi nel campo "disliked" di Booking.
+- **Model 2 senza validation:** deciso di non aggiungerlo (vedi tabella delle decisioni).
+- **Limite principale ("conta il tema, non il giudizio"):** la soluzione vera è un modello di sentiment per tema (aspect-based sentiment: 42 etichette, "Staff criticato" / "Staff lodato", HRAST lo permette), ma richiede di rifare Model 1, tabella e Model 3: lavoro futuro, da dire nel pitch e in Trustworthy AI. Due proposte economiche **approvate e messe nella fase 1** (23 nov): (a) rifare il Fix first dei due hotel del controllo (Savoy, Casa Mimosa) togliendo le critiche che le etichette dicono sbagliate, per misurare quanto l'errore cambia il report; (b) mostrare nel report una confidenza per tema (quante delle recensioni che lo criticano il Model 2 legge come negative), senza cambiare conteggi né classifica.
+
+### **Aggiornamento 23 novembre, notte: confidenza per tema nel report (proposta b).**
+
+- **Cosa fa** (`src/report.py`, funzione `negative_sounding_reviews`): per ogni tema di Fix first il report dice quante delle recensioni che lo criticano "suonano" davvero negative per il Model 2 (almeno una finestra con il tema e P(positivo) < 0.50). Colonna "Sound negative" (es. "46 of 54"); sotto il 50% stampa "only X of Y reviews sound negative: check the examples" e mostra gli esempi anche se il tema non è tra i primi 3. **Non cambia conteggi né classifica** (i pesi del Model 3 sono stati imparati senza questo filtro).
+- **Prova (fatta da Claude con scikit-learn 1.9.1 nel suo ambiente; i modelli sono stati salvati con la 1.8.0 e si caricano senza problemi):** report dei 3 hotel di test identico a prima riga per riga, con in più la colonna. Savoy: Room 120 su 121, Staff 46 su 54; Mövenpick: Location 69 su 94; Casa Mimosa: nessun tema in Fix first. Nessun tema segnalato.
+- **Quanto funziona (prima indicazione, da verificare con le etichette riviste):** su tutte le critiche contate, Casa Mimosa 83% "suonano negative", Mövenpick 90% (il "Savoy" della prova comprendeva più hotel con quel nome, numero non usabile). Direzione giusta (Casa Mimosa è l'hotel con più conteggi sbagliati) ma ampiezza no: il controllo a mano stimava circa 47% di conteggi sbagliati al Casa Mimosa, la confidenza ne segnala circa il 17%. Il Model 2 non riconosce le lodi con negazione ("the staff could not have been nicer": P(positivo) 0.01), riconosce quelle semplici ("Staff were lovely": 0.98).
+- **Recensioni scritte come testo unico (citizenM):** la colonna è sempre piena (es. 11 su 11), perché i pezzi sono già stati mandati al lato negativo dal Model 2: lì non aggiunge informazione.
+- **Prossimo passo:** verificarla con le etichette di (a); poi decidere se tenerla così, cambiarla o toglierla.
+
 ## **Decisioni prese e perché** 
 
 |Decisione|Perché|
@@ -261,24 +288,26 @@ Domanda di partenza: il prodotto funziona con recensioni nuove di un hotel mai v
 |Cross-validation a 5 fold per il Model 3 sulle<br>300 righe|Con poche righe un solo split train / test lascerebbe<br>60 righe di test|
 |Train / validation / test (70 / 15 / 15, seed 42)<br>da qui in poi|Serve il validation appena si sceglie qualcosa: soglie<br>per tema, regolarizzazione, regressione logistica o<br>DistilBERT|
 |DistilBERT solo se batte la regressione logistica<br>sul test|È meno spiegabile e più costoso: deve guadagnarsi il<br>posto|
+|DistilBERT sul Model 1 resta un esperimento, non entra nel prodotto (opzione A, 23 nov)|Superato solo il primo criterio (frasi HRAST), non il secondo (hotel mai visti); non corregge l'errore principale; richiederebbe di rifare tutta la catena; 268 MB e lento senza GPU (README e demo)|
 |Niente scraping|Termini di Booking.com, sezione A15.2|
 |Dataset Kaggle mai su GitHub|Licenze e dimensione dei file; si scaricano da Kaggle<br>seguendo il README|
 |Su GitHub i file piccoli del team senza testi di recensioni e i modelli addestrati (23 nov)|Filippo deve avere i file che crea Flavio; i modelli (1.4 MB in tutto) servono a report e demo senza riaddestrare|
 |Recensioni copiate a mano mai su GitHub (23 nov)|Sono testi scritti dagli ospiti, pubblicati su Booking / Google alle loro condizioni: rimetterli in una repo è una ripubblicazione che non serve al progetto (bastano numeri e grafici); si condividono tra noi su Drive|
 |Soglie della regola fissa 0.50 / 0.50, nessun pezzo messo da parte (23 nov)|Scelte su 150 hotel di train con una regola decisa prima: mettere da parte i pezzi incerti perdeva più critiche di quante ne salvasse (sovrapposizione Fix first 0.817 → 0.850)|
+|Model 2 senza validation set (23 nov)|Il validation serve solo quando si sceglie qualcosa: il Model 2 non sceglie nulla (soglia 0.5, impostazioni di default), quindi il test si usa una volta sola per misurare. Le soglie della regola fissa, che invece si scelgono, sono scelte su 150 hotel di train|
 |Il voto della singola recensione non si mostra al direttore (23 nov)|Su citizenM il Model 3 per recensione fa peggio della baseline (MAE 0.64 contro 0.58); il voto aggregato dell'hotel invece è accurato (8.17 contro 8.33)|
 
 
 
 ## **Cosa stiamo facendo ora e cosa resta** 
 
-Il Model 1 (temi) è fatto e salvato in <mark>models/topic_model.joblib</mark> , con la funzione <mark>predict_topics</mark> . Scoperta utile: in HRAST il tema **Generic** riguarda l'edificio e l'hotel nel suo insieme (building, design, decor, entrance, atmosphere), non i giudizi vaghi. Il Model 1 è stato applicato a tutto il 515K <mark>(src/apply_topics.py</mark> ) e il Model 3 è addestrato su tutte le recensioni ( <mark>src/impact_full.py</mark> ). Bootstrap, confronto e analisi di sensibilità sono fatti (22 novembre). Il generatore di report esiste (`src/pipeline.py` e `src/report.py`, nella branch `main`) ed è provato su 3 hotel e verificato sui 224 hotel di test (22 novembre); DistilBERT sul Model 1 batte il TF-IDF su HRAST (22 novembre); la stabilità è confermata con tre seed e si tiene il seed 42; ora si controlla l'errore di conteggio, poi si decide se applicarlo al 515K. Il 23 novembre (branch `flavio-pre-web-development`) è stata costruita la regola fissa: il report funziona anche con recensioni scritte come testo unico ed è stato provato su un hotel svizzero mai visto (citizenM Zürich). Il piano completo, con le caselle da spuntare, è nella roadmap. 
+Il Model 1 (temi) è fatto e salvato in <mark>models/topic_model.joblib</mark> , con la funzione <mark>predict_topics</mark> . Scoperta utile: in HRAST il tema **Generic** riguarda l'edificio e l'hotel nel suo insieme (building, design, decor, entrance, atmosphere), non i giudizi vaghi. Il Model 1 è stato applicato a tutto il 515K <mark>(src/apply_topics.py</mark> ) e il Model 3 è addestrato su tutte le recensioni ( <mark>src/impact_full.py</mark> ). Bootstrap, confronto e analisi di sensibilità sono fatti (22 novembre). Il generatore di report esiste (`src/pipeline.py` e `src/report.py`, nella branch `main`) ed è provato su 3 hotel e verificato sui 224 hotel di test (22 novembre); DistilBERT sul Model 1 batte il TF-IDF su HRAST (22 novembre); la stabilità è confermata con tre seed; il 23 novembre si è deciso di **non** collegarlo al prodotto (opzione A: esperimento documentato). Il 23 novembre (branch `flavio-pre-web-development`) è stata costruita la regola fissa: il report funziona anche con recensioni scritte come testo unico ed è stato provato su un hotel svizzero mai visto (citizenM Zürich). Il piano completo, con le caselle da spuntare, è nella roadmap. 
 
 1. **Cuore ML (16–22 nov):** Model 1 con soglia per tema scelta sul validation; Model 2 rifatto con train / validation / test e F1 anche sulle lamentele; regola di divisione delle frasi (**fatta il 23 nov**, valutata contro i campi Booking del 515K e su citizenM Zürich). 
 
 2. **Model 3 e report (23–29 nov):** Model 1 applicato a tutto il 515K; Model 3 su tutte le recensioni con temi criticati e lodati; test su hotel mai visti (divisione per hotel); generatore del report "cosa sistemare per primo". 
 
-3. **Validazione (fino al 6 dic):** test set svizzero, DistilBERT sul sentiment, confronto con un LLM, feedback di utenti veri. 
+3. **Validazione (fino al 6 dic):** test set svizzero, DistilBERT sul sentiment (ora opzionale della fase 1 nella To-Do list), confronto con un LLM, feedback di utenti veri. **L'ordine aggiornato delle fasi è nella To-Do list** (`docs/internal/To-Do-List.md`). 
 
 4. **Consegne (dal 30 nov al pitch):** demo dal vivo (per esempio Streamlit), codice con README, sito web, sezione Trustworthy AI, pitch finale di circa 10 minuti. 
 
@@ -347,7 +376,7 @@ Se manca tempo si taglia in quest'ordine: video, confronto con l'LLM, DistilBERT
 |---|---|
 |Questo file di contesto|`docs/internal/` nella repository (branch `main`)|
 |To-Do list in ordine di fase (aggiornata da Claude)|`docs/internal/To-Do-List.md`|
-|Guida al codice riga per riga (inglese)|`docs/CODE_EXPLANATION.md`|
+|Guida al codice riga per riga (inglese), tutti gli script (riscritta il 23 nov)|`docs/CODE_EXPLANATION.md`|
 |Roadmap fino al pitch finale|documento|
 |Guida per le domande tecniche (italiano)|documento|
 |Guida per le domande tecniche (inglese)|Roomor_technical_QA_study_guide.docx|

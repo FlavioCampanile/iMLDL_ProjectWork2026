@@ -4,5 +4,5 @@ pandas==3.0.1
 numpy==2.2.6
 joblib==1.5.3
 matplotlib==3.10.8
-# only for experiments/impact_model.py (reads an .xlsx file)
+# reads and writes .xlsx files (src/check_pieces.py, src/explain_hotel.py, experiments/impact_model.py)
 openpyxl
